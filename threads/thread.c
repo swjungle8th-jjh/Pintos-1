@@ -80,41 +80,40 @@ static tid_t allocate_tid (void);
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
 /* Initializes the threading system by transforming the code
-   that's currently running into a thread.  This can't work in
-   general and it is possible in this case only because loader.S
-   was careful to put the bottom of the stack at a page boundary.
+     that's currently running into a thread.  This can't work in
+     general and it is possible in this case only because loader.S
+     was careful to put the bottom of the stack at a page boundary.
 
-   Also initializes the run queue and the tid lock.
+     Also initializes the run queue and the tid lock.
 
-   After calling this function, be sure to initialize the page
-   allocator before trying to create any threads with
-   thread_create().
+     After calling this function, be sure to initialize the page
+     allocator before trying to create any threads with
+     thread_create().
 
-   It is not safe to call thread_current() until this function
-   finishes. */
-void
-thread_init (void) {
-	ASSERT (intr_get_level () == INTR_OFF);
+     It is not safe to call thread_current() until this function
+     finishes. */
+void thread_init(void) {
+    ASSERT(intr_get_level() == INTR_OFF);
 
-	/* Reload the temporal gdt for the kernel
-	 * This gdt does not include the user context.
-	 * The kernel will rebuild the gdt with user context, in gdt_init (). */
-	struct desc_ptr gdt_ds = {
-		.size = sizeof (gdt) - 1,
-		.address = (uint64_t) gdt
-	};
-	lgdt (&gdt_ds);
+    /* Reload the temporal gdt for the kernel
+     * This gdt does not include the user context.
+     * The kernel will rebuild the gdt with user context, in gdt_init (). */
+    struct desc_ptr gdt_ds = {.size = sizeof(gdt) - 1, .address = (uint64_t)gdt};
+    lgdt(&gdt_ds);
 
-	/* Init the globla thread context */
-	lock_init (&tid_lock);
-	list_init (&ready_list);
-	list_init (&destruction_req);
+    /* Init the globla thread context */
+    lock_init(&tid_lock);
+    list_init(&ready_list);
+    list_init(&destruction_req);
 
-	/* Set up a thread structure for the running thread. */
-	initial_thread = running_thread ();
-	init_thread (initial_thread, "main", PRI_DEFAULT);
-	initial_thread->status = THREAD_RUNNING;
-	initial_thread->tid = allocate_tid ();
+    /* sleep list initialize */
+    list_init(&sleep_list);
+
+    /* Set up a thread structure for the running thread. */
+    initial_thread = running_thread();
+    init_thread(initial_thread, "main", PRI_DEFAULT);
+    initial_thread->status = THREAD_RUNNING;
+    initial_thread->tid = allocate_tid();
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.

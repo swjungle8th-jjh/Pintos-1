@@ -87,15 +87,27 @@ timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
 
+struct list sleep_list;
 /* Suspends execution for approximately TICKS timer ticks. */
-void
-timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
+void timer_sleep(int64_t ticks) {
+    int64_t start = timer_ticks();
+    struct thread *current_t = thread_current();
+    enum intr_level old_level;
 
-	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+    ASSERT(intr_get_level() == INTR_ON);
+
+    old_level = intr_disable();
+
+    if (timer_elapsed(start) < ticks) {
+        current_t->ticks = ticks;
+        list_push_front(&sleep_list, &current_t->elem);
+        thread_block();
+    }
+    intr_set_level(old_level);
 }
+
+// void wake_thread(struct thread *t, ) {
+// }
 
 /* Suspends execution for approximately MS milliseconds. */
 void
@@ -122,10 +134,20 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
-static void
-timer_interrupt (struct intr_frame *args UNUSED) {
-	ticks++;
-	thread_tick ();
+static void timer_interrupt(struct intr_frame *args UNUSED) {
+    ticks++;
+    if (!list_empty(&sleep_list)) {
+        struct list_elem *current = list_begin(&sleep_list);
+        for (current; current != list_end(&sleep_list); current = list_next(current)) {
+            struct thread *t = list_entry(current, struct thread, elem);
+            msg("t->ticks = %d, t->tid = %d", t->ticks, t->tid);
+            if (t->ticks <= timer_ticks()) {
+                list_remove(&t->elem);
+                thread_unblock(t);
+            }
+        }
+    }
+    thread_tick();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

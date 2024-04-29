@@ -18,6 +18,8 @@ enum thread_status {
 	THREAD_DYING        /* About to be destroyed. */
 };
 
+extern struct list sleep_list;
+
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -86,11 +88,14 @@ typedef int tid_t;
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
 struct thread {
-	/* Owned by thread.c. */
-	tid_t tid;                          /* Thread identifier. */
-	enum thread_status status;          /* Thread state. */
-	char name[16];                      /* Name (for debugging purposes). */
-	int priority;                       /* Priority. */
+    /* Owned by thread.c. */
+    tid_t tid;                 /* Thread identifier. */
+    enum thread_status status; /* Thread state. */
+    char name[16];             /* Name (for debugging purposes). */
+    int priority;              /* Priority. */
+
+		/* 현재 스레드가 얼만큼 실행했는지에 대한 틱 */
+		long long ticks;	
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
