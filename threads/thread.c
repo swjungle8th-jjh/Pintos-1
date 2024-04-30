@@ -68,7 +68,6 @@ static void do_schedule(int status);
 static void schedule(void);
 static tid_t allocate_tid(void);
 
-bool decrease_func(const struct list_elem *a, const struct list_elem *b, void *aux);
 void run_highest_priority_thread(int curr_priority);
 
 /* Returns true if T appears to point to a valid thread. */
@@ -155,10 +154,10 @@ void thread_tick(void) {  // 어떤 틱인지 판단해서 그 틱 올려주기
 
     /* Enforce preemption. */
     /* 양보하고나서의 시간 >= 타임 슬라이스 */
-    
+
     // RR 방식( 우선순위 스케줄링에서는 필요 없음 )
-    if (++thread_ticks >= TIME_SLICE)
-        intr_yield_on_return();
+    // if (++thread_ticks >= TIME_SLICE)
+    //     intr_yield_on_return();
 }
 
 /* Prints thread statistics. */
@@ -252,13 +251,16 @@ void thread_unblock(struct thread *t) {
     list_insert_ordered(&ready_list, &t->elem, decrease_func, NULL);
     t->status = THREAD_READY;
     int p = thread_get_priority();
-    if(p > 0)
+
+    // idle 이 current thread일 때 하면 터짐.. 이유가 뭘까 ?
+    // 이닛단계에서 idle이 세마업을 해주기도 전에 main으로 컨텍스트 스위칭이되어서
+    // 세마에 갇힌 메인을 꺼내주지 못함.
+
+    if(strcmp(thread_name(), "idle"))
         run_highest_priority_thread(p);
     // list_push_back(&ready_list, &t->elem);
     intr_set_level(old_level);
 }
-
-
 
 /* Returns the name of the running thread. */
 const char *thread_name(void) {
@@ -312,8 +314,7 @@ void thread_yield(void) {
     ASSERT(!intr_context());
 
     old_level = intr_disable();
-    if (curr != idle_thread)
-    {
+    if (curr != idle_thread) {
         // list_push_back(&ready_list, &curr->elem);
         list_insert_ordered(&ready_list, &curr->elem, decrease_func, NULL);
     }
@@ -328,10 +329,13 @@ void thread_set_priority(int new_priority) {
 }
 
 void run_highest_priority_thread(int curr_priority) {
+    if (list_empty(&ready_list))
+        return;
+
     struct list_elem *front = list_begin(&ready_list);
     struct thread *front_t = list_entry(front, struct thread, elem);
-    
-    if(front_t->priority > curr_priority) {
+
+    if (front_t->priority > curr_priority) {
         thread_yield();
     }
 }
