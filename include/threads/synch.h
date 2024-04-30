@@ -18,6 +18,7 @@ void sema_self_test(void);
 
 bool decrease_sema_func(const struct list_elem *a, const struct list_elem *b, void *aux);
 
+
 /* Lock. */
 struct lock {
     struct thread *holder;      /* Thread holding lock (for debugging). */
