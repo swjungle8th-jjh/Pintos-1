@@ -106,7 +106,7 @@ void sema_up(struct semaphore *sema) {
     ASSERT(sema != NULL);
 
     old_level = intr_disable();
-    sema->value++;
+    sema->value++;  // 원자성 보장하기 위해()
     if (!list_empty(&sema->waiters))
         thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
     intr_set_level(old_level);
@@ -258,6 +258,18 @@ void cond_init(struct condition *cond) {
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
+
+bool decrease_sema_func(const struct list_elem *a, const struct list_elem *b, void *aux) {
+    struct semaphore_elem *sema_elem_a = list_entry(a, struct semaphore_elem, elem);
+    struct semaphore_elem *sema_elem_b = list_entry(b, struct semaphore_elem, elem);
+
+    struct thread *thread_a = list_entry(list_begin(&sema_elem_a->semaphore.waiters), struct thread, elem);
+    struct thread *thread_b = list_entry(list_begin(&sema_elem_b->semaphore.waiters), struct thread, elem);
+
+    return thread_a->priority > thread_b->priority;
+}
+
+
 void cond_wait(struct condition *cond, struct lock *lock) {
     struct semaphore_elem waiter;
 
@@ -267,7 +279,8 @@ void cond_wait(struct condition *cond, struct lock *lock) {
     ASSERT(lock_held_by_current_thread(lock));
 
     sema_init(&waiter.semaphore, 0);
-    list_push_back(&cond->waiters, &waiter.elem);
+    // list_push_back(&cond->waiters, &waiter.elem);
+    list_insert_ordered(&cond->waiters, &waiter.elem, decrease_sema_func, NULL);
     lock_release(lock);
     sema_down(&waiter.semaphore);
     lock_acquire(lock);
@@ -286,8 +299,12 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
     ASSERT(!intr_context());
     ASSERT(lock_held_by_current_thread(lock));
 
+    list_sort(&cond->waiters, decrease_sema_func, NULL);
+
     if (!list_empty(&cond->waiters))
         sema_up(&list_entry(list_pop_front(&cond->waiters), struct semaphore_elem, elem)->semaphore);
+    
+
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
