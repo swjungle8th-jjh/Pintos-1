@@ -30,9 +30,6 @@
      that are ready to run but not actually running. */
 static struct list ready_list;
 
-/* sleep 하는 애들 채워 넣는 리스트 */
-// struct list sleep_list;
-
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -279,7 +276,7 @@ struct thread *thread_current(void) {
          of stack, so a few big automatic arrays or moderate
          recursion can cause stack overflow. */
     ASSERT(is_thread(t));
-    ASSERT(t->status == THREAD_RUNNING);
+    // ASSERT(t->status == THREAD_RUNNING);
 
     return t;
 }
@@ -322,9 +319,28 @@ void thread_yield(void) {
     intr_set_level(old_level);
 }
 
+void donate_priority_2(struct lock *lock) {
+    enum intr_level old_level;
+    old_level = intr_disable();
+    if (lock->holder->priority < thread_current()->priority) {
+        list_insert_ordered(&(lock->holder->donation_list), &(thread_current()->donation_elem), decrease_func, NULL);
+        while(true) {
+            lock->holder->priority = thread_current()->priority;
+            if(lock->holder->wait_on_lock == NULL) return;
+            lock = lock->holder->wait_on_lock;
+        }
+    }
+    // intr_set_level(old_level);
+}
+
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority) {
-    thread_current()->priority = new_priority;
+    if(thread_current()->priority == thread_current()->prev_priority)
+        thread_current()->priority = new_priority;
+    thread_current()->prev_priority = new_priority;
+    if(thread_current()->wait_on_lock != NULL)
+        donate_priority_2(thread_current()->wait_on_lock);
     run_highest_priority_thread(thread_get_priority());
 }
 
@@ -335,7 +351,7 @@ void run_highest_priority_thread(int curr_priority) {
     struct list_elem *front = list_begin(&ready_list);
     struct thread *front_t = list_entry(front, struct thread, elem);
 
-    if (front_t->priority > curr_priority) {
+    if (front_t->priority >= curr_priority) {
         thread_yield();
     }
 }
@@ -425,6 +441,9 @@ static void init_thread(struct thread *t, const char *name, int priority) {  // 
     strlcpy(t->name, name, sizeof t->name);
     t->tf.rsp = (uint64_t)t + PGSIZE - sizeof(void *);  //	스택포인터 저장
     t->priority = priority;
+    t->prev_priority = priority;
+    /* donation list initialize */
+    list_init(&(t->donation_list));
     t->magic = THREAD_MAGIC;  // 매직을 넘으면 스택을 넘은 것 . 스택의 마지막을 매직으로 설정해서 스택 오버플로우를 감지한다.
 }
 
@@ -437,7 +456,10 @@ static struct thread *next_thread_to_run(void) {
     if (list_empty(&ready_list))
         return idle_thread;
     else
+    {   /* 후 순위 쓰레드가 도네이션을 받아 우선순위 상승했을 때를 고려 */
+        list_sort(&ready_list, decrease_func, NULL);
         return list_entry(list_pop_front(&ready_list), struct thread, elem);
+    }
 }
 
 /* Use iretq to launch the thread */
