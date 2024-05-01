@@ -6,6 +6,8 @@
 #include <stdint.h>
 
 #include "threads/interrupt.h"
+
+
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -94,11 +96,20 @@ struct thread {
     char name[16];             /* Name (for debugging purposes). */
     int priority;              /* Priority. */
 
-		/* 현재 스레드가 얼만큼 실행했는지에 대한 틱 */
-		long long ticks;	
+    /* 도네이션 이전 priority */
+    int prev_priority;
+
+    /* 현재 스레드가 얼만큼 실행했는지에 대한 틱 */
+    long long ticks;	
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
+
+    /* 도네이션 */
+    struct list donation_list;
+    struct lock *wait_on_lock;
+    struct list_elem donation_elem;
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
