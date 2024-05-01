@@ -1,5 +1,5 @@
 threads/palloc.o: ../../threads/palloc.c ../../include/threads/palloc.h \
- ../../include/lib/stddef.h ../../include/lib/stdint.h \
+ ../../include/lib/stdint.h ../../include/lib/stddef.h \
  ../../include/lib/kernel/bitmap.h ../../include/lib/stdbool.h \
  ../../include/lib/inttypes.h ../../include/lib/debug.h \
  ../../include/lib/round.h ../../include/lib/stdio.h \
