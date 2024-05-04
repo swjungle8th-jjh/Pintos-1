@@ -449,8 +449,9 @@ load(const char *file_name, struct intr_frame *if_)
 		if_->rsp = if_->rsp - len;
 		temp_padding_size += (strlen(temp_parsing[i]) + 1);
 		memcpy(if_->rsp, temp_parsing[i], len);
-		*temp_parsing[i] = if_->rsp;
-
+		// *temp_parsing[i] = if_->rsp;
+		memcpy(temp_parsing[i], if_->rsp, 8);
+		// dd
 		// temp_parsing[i] = if_->rsp;
 	}
 
