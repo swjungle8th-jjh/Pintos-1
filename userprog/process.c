@@ -443,29 +443,30 @@ load(const char *file_name, struct intr_frame *if_)
 
 	int temp_padding_size = 0;
 
-	for (int i = count - 1; i >= 1; i--) // 역순으로 출력
+	for (int i = count - 1; i >= 0; i--) // 역순으로 출력
 	{
 		int len = strlen(temp_parsing[i]) + 1;
-		if_->rsp = if_->rsp - len;
-		temp_padding_size += (strlen(temp_parsing[i]) + 1);
+		if_->rsp -= len;
+		temp_padding_size += len;
 		memcpy(if_->rsp, temp_parsing[i], len);
-		// *temp_parsing[i] = if_->rsp;
-		memcpy(temp_parsing[i], if_->rsp, 8);
+		temp_parsing[i] = if_->rsp;
+		// memcpy(temp_parsing[i], if_->rsp, 8);
 		// dd
 		// temp_parsing[i] = if_->rsp;
 	}
 
 	int padding_size = (((temp_padding_size + 7) / 8) * 8 - temp_padding_size);
+
 	if_->rsp = if_->rsp - padding_size;
 	// memcpy(if_->rsp, '\0', padding_size);
 	memset(if_->rsp, 0, padding_size);
 	if_->rsp = if_->rsp - sizeof(uintptr_t);
 	// memcpy(if_->rsp, '\0', sizeof(uintptr_t));
 	memset(if_->rsp, 0, sizeof(uintptr_t));
-	for (int i = count - 1; i >= 1; i--) // 역순으로 출력
+	for (int i = count - 1; i >= 0; i--) // 역순으로 출력
 	{
 		if_->rsp = if_->rsp - sizeof(uintptr_t);
-		memcpy(if_->rsp, temp_parsing[i], 8);
+		memcpy(if_->rsp, &temp_parsing[i], sizeof(uintptr_t));
 	}
 	// rsi
 	if_->R.rsi = if_->rsp;
