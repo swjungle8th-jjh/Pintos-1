@@ -481,7 +481,7 @@ load(const char *file_name, struct intr_frame *if_)
 	memset(if_->rsp, 0, sizeof(uintptr_t));
 
 	// rdi
-	if_->R.rdi = count - 1;
+	if_->R.rdi = count;
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
