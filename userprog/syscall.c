@@ -56,9 +56,7 @@ void syscall_handler(struct intr_frame *f)
 
 	// 유효 주소 인지 확인 .
 	if (!check_address(f->rsp))
-	{
-		kill(f);
-	}
+		thread_exit();
 
 	int number = f->R.rax;
 
