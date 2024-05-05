@@ -8,8 +8,11 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 
-void syscall_entry (void);
-void syscall_handler (struct intr_frame *);
+void syscall_entry(void);
+void syscall_handler(struct intr_frame *);
+//-- system call
+void halt();
+void exit(int status);
 
 /* System call.
  *
@@ -63,10 +66,10 @@ void syscall_handler(struct intr_frame *f)
 	switch (number)
 	{
 	case SYS_HALT: /* Halt the operating system. */
-		power_off();
+		halt();
 		break;
 	case SYS_EXIT: /* Terminate this process. */
-		/* code */
+		exit(f->R.rdi);
 		break;
 	case SYS_FORK: /* Clone current process. */
 		/* code */
@@ -94,6 +97,7 @@ void syscall_handler(struct intr_frame *f)
 		break;
 	case SYS_WRITE: /* Write to a file. */
 		/* code */
+		printf("%s", f->R.rsi); /*테스트 통과를 위한 임시코드?*/
 		break;
 	case SYS_SEEK: /* Change position in a file. */
 		/* code */
@@ -108,5 +112,15 @@ void syscall_handler(struct intr_frame *f)
 		break;
 	}
 
-	printf("system call number-> %lld \n", f->R.rax);
+	// printf("system call number-> %lld \n", f->R.rax);
+}
+void halt()
+{
+	power_off();
+}
+
+void exit(int status)
+{
+	printf("%s: exit(%d)\n", thread_current()->name, status);
+	thread_exit();
 }
