@@ -37,10 +37,78 @@ syscall_init (void) {
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
 
+bool check_address(void *addr)
+{
+	if (!is_user_vaddr(addr) || addr == NULL)
+	{
+		return false;
+	}
+	return true;
+}
 /* The main system call interface */
-void
-syscall_handler (struct intr_frame *f UNUSED) {
+/*
+1. UNUSED 제거
+*/
+void syscall_handler(struct intr_frame *f)
+{
 	// TODO: Your implementation goes here.
-	printf ("system call!\n");
-	thread_exit ();
+	// 스시템콜 핸들러로 등록을 해야함 .
+
+	// 유효 주소 인지 확인 .
+	if (!check_address(f->rsp))
+	{
+		kill(f);
+	}
+
+	int number = f->R.rax;
+
+	switch (number)
+	{
+	case SYS_HALT: /* Halt the operating system. */
+		/* code */
+		break;
+	case SYS_EXIT: /* Terminate this process. */
+		/* code */
+		break;
+	case SYS_FORK: /* Clone current process. */
+		/* code */
+		break;
+	case SYS_EXEC: /* Switch current process. */
+		/* code */
+		break;
+	case SYS_WAIT: /* Wait for a child process to die. */
+		/* code */
+		break;
+	case SYS_CREATE: /* Create a file. */
+		/* code */
+		break;
+	case SYS_REMOVE: /* Delete a file. */
+		/* code */
+		break;
+	case SYS_OPEN: /* Open a file. */
+		/* code */
+		break;
+	case SYS_FILESIZE: /* Obtain a file's size. */
+		/* code */
+		break;
+	case SYS_READ: /* Read from a file. */
+		/* code */
+		break;
+	case SYS_WRITE: /* Write to a file. */
+		/* code */
+		break;
+	case SYS_SEEK: /* Change position in a file. */
+		/* code */
+		break;
+	case SYS_TELL: /* Report current position in a file. */
+		/* code */
+		break;
+	case SYS_CLOSE: /* Close a file. */
+		/* code */
+		break;
+	default:
+		break;
+	}
+
+	printf("system call!\n");
 }
