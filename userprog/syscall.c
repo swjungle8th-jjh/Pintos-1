@@ -63,7 +63,7 @@ void syscall_handler(struct intr_frame *f)
 	switch (number)
 	{
 	case SYS_HALT: /* Halt the operating system. */
-		/* code */
+		power_off();
 		break;
 	case SYS_EXIT: /* Terminate this process. */
 		/* code */
@@ -108,5 +108,5 @@ void syscall_handler(struct intr_frame *f)
 		break;
 	}
 
-	printf("system call!\n");
+	printf("system call number-> %lld \n", f->R.rax);
 }
