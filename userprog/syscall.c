@@ -14,6 +14,7 @@ void syscall_handler(struct intr_frame *);
 void halt();
 void exit(int status);
 
+bool create(const char *, unsigned);
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -81,7 +82,7 @@ void syscall_handler(struct intr_frame *f)
 		/* code */
 		break;
 	case SYS_CREATE: /* Create a file. */
-		/* code */
+		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
 	case SYS_REMOVE: /* Delete a file. */
 		/* code */
@@ -122,5 +123,17 @@ void halt()
 void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
+	// printf("%s: exit(%d)\n", thread_current()->name, thread_current()->tf.R.rdi);
 	thread_exit();
+}
+
+bool create(const char *file, unsigned initial_size)
+{
+
+	if (file == NULL || !check_address(file))
+	{
+		exit(-1);
+		return false;
+	}
+	return filesys_create(file, initial_size);
 }
