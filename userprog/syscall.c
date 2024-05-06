@@ -15,6 +15,7 @@ void halt();
 void exit(int status);
 
 bool create(const char *, unsigned);
+bool remove(const char *);
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -82,7 +83,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
 	case SYS_REMOVE: /* Delete a file. */
-		/* code */
+		f->R.rax = remove(f->R.rdi);
 		break;
 	case SYS_OPEN: /* Open a file. */
 		/* code */
@@ -133,4 +134,14 @@ bool create(const char *file, unsigned initial_size)
 		return false;
 	}
 	return filesys_create(file, initial_size);
+}
+
+bool remove(const char *file)
+{
+	if (file == NULL || !check_address(file))
+	{
+		exit(-1);
+		return false;
+	}
+	return filesys_remove(file);
 }
