@@ -43,7 +43,8 @@ syscall_init (void) {
 
 bool check_address(void *addr)
 {
-	if (!is_user_vaddr(addr) || addr == NULL)
+	struct thread *cur = thread_current();
+	if (addr == NULL || !is_user_vaddr(addr) || !(pml4_get_page(cur->pml4, addr)))
 	{
 		return false;
 	}
@@ -57,10 +58,6 @@ void syscall_handler(struct intr_frame *f)
 {
 	// TODO: Your implementation goes here.
 	// 스시템콜 핸들러로 등록을 해야함 .
-
-	// 유효 주소 인지 확인 .
-	if (!check_address(f->rsp))
-		thread_exit();
 
 	int number = f->R.rax;
 
