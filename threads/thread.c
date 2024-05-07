@@ -214,7 +214,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     {
         PANIC("Failed to allocate file descriptor table");
     }
-    t->next_fd = 2;
+    t->next_fd = 3;
 
     /* Add to run queue. */
     thread_unblock(t);
