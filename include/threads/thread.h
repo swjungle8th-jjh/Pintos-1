@@ -110,14 +110,14 @@ struct thread
     struct list donation_list;
     struct lock *wait_on_lock;
     struct list_elem donation_elem;
+    /*  File Descriptor*/
+    struct file **fdt;
+    int64_t next_fd;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint64_t *pml4; /* Page map level 4 */
 
-    /*  File Descriptor*/
-    struct file **fdt;
-    int64_t next_fd;
 #endif
 #ifdef VM
     /* Table for whole virtual memory owned by thread. */
