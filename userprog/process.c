@@ -27,9 +27,11 @@ static bool load(const char *file_name, struct intr_frame *if_);
 static void initd(void *f_name);
 static void __do_fork(void *);
 
+/* fd*/
+void process_close_file(int);
+struct file *process_get_file(int);
 /* General process initializer for initd and other process. */
-static void
-process_init(void)
+static void process_init(void)
 {
 	struct thread *current = thread_current();
 }
@@ -229,6 +231,13 @@ void process_exit(void)
 	 * TODO: We recommend you to implement process resource cleanup here. */
 	// int status = (int *)(curr->tf.R.rdi);
 	// printf("%s: exit(%d)\n", curr->name, status);
+	for (int c_fd = 0; c_fd < curr->next_fd; c_fd++)
+	{
+		if (curr->fdt[c_fd] != NULL)
+			process_close_file(c_fd);
+	}
+
+	palloc_free_page(curr->fdt);
 
 	process_cleanup();
 }
@@ -653,6 +662,18 @@ int process_add_file(struct file *f)
 	t->fdt[t->next_fd] = f;
 
 	return t->next_fd++;
+}
+
+struct file *process_get_file(int fd)
+{
+	return thread_current()->fdt[fd];
+}
+void process_close_file(int fd)
+{
+
+	file_close(process_get_file(fd));
+
+	thread_current()->fdt[fd] = NULL;
 }
 
 #else
