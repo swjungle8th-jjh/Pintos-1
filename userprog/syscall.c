@@ -20,6 +20,7 @@ void exit(int status);
 bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
+int filesize (int fd);
 void close(int);
 
 /* System call.
@@ -96,6 +97,7 @@ void syscall_handler(struct intr_frame *f)
 		break;
 	case SYS_FILESIZE: /* Obtain a file's size. */
 		/* code */
+		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
 		/* code */
@@ -168,7 +170,34 @@ int open(const char *file)
 	return process_add_file(open_file);
 }
 
+int filesize (int fd)
+{
+	
+	struct file *f = process_get_file(fd);
+	
+	printf("%d", file_length(f));
+	printf("jaeheok 3\n");
+	return file_length(f);
+}
+
+int read (int fd, void *buffer, unsigned size)
+{
+	struct file * f = process_get_file(fd);
+
+	if (f == NULL || fd >= 64)
+		return -1;
+
+	if (fd == 0)
+	{
+		buffer = (void *) input_getc();
+	}
+	else {
+		return file_read(f, buffer, size);
+	}
+}
+
 void close(int fd)
 {
 	process_close_file(fd);
 }
+

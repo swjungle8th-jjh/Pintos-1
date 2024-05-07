@@ -668,6 +668,7 @@ struct file *process_get_file(int fd)
 {
 	return thread_current()->fdt[fd];
 }
+
 void process_close_file(int fd)
 {
 
