@@ -644,6 +644,17 @@ install_page(void *upage, void *kpage, bool writable)
 	 * address, then map our page there. */
 	return (pml4_get_page(t->pml4, upage) == NULL && pml4_set_page(t->pml4, upage, kpage, writable));
 }
+
+/* file descriptor */
+int process_add_file(struct file *f)
+{
+	struct thread *t = thread_current();
+
+	t->fdt[t->next_fd] = f;
+
+	return t->next_fd++;
+}
+
 #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the

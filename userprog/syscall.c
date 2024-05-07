@@ -5,17 +5,22 @@
 #include "threads/thread.h"
 #include "threads/loader.h"
 #include "userprog/gdt.h"
+#include "userprog/process.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
 
+#include "filesys/filesys.h"
+
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
+
 //-- system call
 void halt();
 void exit(int status);
-
 bool create(const char *, unsigned);
 bool remove(const char *);
+int open(const char *);
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -86,7 +91,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = remove(f->R.rdi);
 		break;
 	case SYS_OPEN: /* Open a file. */
-		/* code */
+		f->R.rax = open(f->R.rdi);
 		break;
 	case SYS_FILESIZE: /* Obtain a file's size. */
 		/* code */
@@ -144,4 +149,21 @@ bool remove(const char *file)
 		return false;
 	}
 	return filesys_remove(file);
+}
+
+int open(const char *file)
+{
+	// printf("파일 포인터 %s\n", file);
+	if (file == NULL || !check_address(file))
+	{
+		exit(-1);
+		return -1;
+	}
+	struct file *open_file = filesys_open(file);
+
+	if (open_file == NULL)
+	{
+		return -1;
+	}
+	return process_add_file(open_file);
 }
