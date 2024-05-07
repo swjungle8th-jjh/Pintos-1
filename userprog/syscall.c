@@ -121,8 +121,6 @@ void syscall_handler(struct intr_frame *f)
 	default:
 		break;
 	}
-
-	// printf("system call number-> %lld \n", f->R.rax);
 }
 
 void halt()
