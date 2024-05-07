@@ -8,9 +8,14 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 
-void syscall_entry (void);
-void syscall_handler (struct intr_frame *);
+void syscall_entry(void);
+void syscall_handler(struct intr_frame *);
+//-- system call
+void halt();
+void exit(int status);
 
+bool create(const char *, unsigned);
+bool remove(const char *);
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -37,10 +42,106 @@ syscall_init (void) {
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
 
+bool check_address(void *addr)
+{
+	struct thread *cur = thread_current();
+	if (addr == NULL || !is_user_vaddr(addr) || !(pml4_get_page(cur->pml4, addr)))
+	{
+		return false;
+	}
+	return true;
+}
 /* The main system call interface */
-void
-syscall_handler (struct intr_frame *f UNUSED) {
+/*
+1. UNUSED 제거
+*/
+void syscall_handler(struct intr_frame *f)
+{
 	// TODO: Your implementation goes here.
-	printf ("system call!\n");
-	thread_exit ();
+	// 스시템콜 핸들러로 등록을 해야함 .
+
+	int number = f->R.rax;
+
+	switch (number)
+	{
+	case SYS_HALT: /* Halt the operating system. */
+		halt();
+		break;
+	case SYS_EXIT: /* Terminate this process. */
+		exit(f->R.rdi);
+		break;
+	case SYS_FORK: /* Clone current process. */
+		/* code */
+		break;
+	case SYS_EXEC: /* Switch current process. */
+		/* code */
+		break;
+	case SYS_WAIT: /* Wait for a child process to die. */
+		/* code */
+		break;
+	case SYS_CREATE: /* Create a file. */
+		f->R.rax = create(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_REMOVE: /* Delete a file. */
+		f->R.rax = remove(f->R.rdi);
+		break;
+	case SYS_OPEN: /* Open a file. */
+		/* code */
+		break;
+	case SYS_FILESIZE: /* Obtain a file's size. */
+		/* code */
+		break;
+	case SYS_READ: /* Read from a file. */
+		/* code */
+		break;
+	case SYS_WRITE: /* Write to a file. */
+		/* code */
+		printf("%s", f->R.rsi); /*테스트 통과를 위한 임시코드?*/
+		break;
+	case SYS_SEEK: /* Change position in a file. */
+		/* code */
+		break;
+	case SYS_TELL: /* Report current position in a file. */
+		/* code */
+		break;
+	case SYS_CLOSE: /* Close a file. */
+		/* code */
+		break;
+	default:
+		break;
+	}
+
+	// printf("system call number-> %lld \n", f->R.rax);
+}
+void halt()
+{
+	power_off();
+}
+
+void exit(int status)
+{
+	printf("%s: exit(%d)\n", thread_current()->name, status);
+	// printf("%s: exit(%d)\n", thread_current()->name, thread_current()->tf.R.rdi);
+	thread_exit();
+}
+
+bool create(const char *file, unsigned initial_size)
+{
+
+	if (file == NULL || !check_address(file))
+	{
+		exit(-1);
+		return false;
+	}
+	return filesys_create(file, initial_size);
+}
+
+bool remove(const char *file)
+{
+	if (file == NULL || !check_address(file))
+	{
+		exit(-1);
+		return false;
+	}
+	return filesys_remove(file);
 }

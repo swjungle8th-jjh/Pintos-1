@@ -41,7 +41,7 @@ process_init(void)
  * Notice that THIS SHOULD BE CALLED ONCE. */
 tid_t process_create_initd(const char *file_name)
 {
-	char *fn_copy;
+	char *fn_copy, *save_ptr;
 	tid_t tid;
 
 	/* Make a copy of FILE_NAME.
@@ -50,6 +50,8 @@ tid_t process_create_initd(const char *file_name)
 	if (fn_copy == NULL)
 		return TID_ERROR;
 	strlcpy(fn_copy, file_name, PGSIZE);
+
+	strtok_r(file_name, " ", &save_ptr);
 
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create(file_name, PRI_DEFAULT, initd, fn_copy);
@@ -186,7 +188,7 @@ int process_exec(void *f_name)
 	success = load(file_name, &_if);
 
 	// test hex
-	hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, 1);
+	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, 1);
 
 	/* If load failed, quit. */
 	palloc_free_page(file_name);
@@ -225,6 +227,8 @@ void process_exit(void)
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_term`nation.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	// int status = (int *)(curr->tf.R.rdi);
+	// printf("%s: exit(%d)\n", curr->name, status);
 
 	process_cleanup();
 }
@@ -477,7 +481,7 @@ load(const char *file_name, struct intr_frame *if_)
 	memset(if_->rsp, 0, sizeof(uintptr_t));
 
 	// rdi
-	if_->R.rdi = count - 1;
+	if_->R.rdi = count;
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
