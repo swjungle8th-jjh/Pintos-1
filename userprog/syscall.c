@@ -131,8 +131,6 @@ void halt()
 void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
-	// printf("%s: exit(%d)\n", thread_current()->name, thread_current()->tf.R.rdi);
-
 	thread_exit();
 }
 
@@ -140,34 +138,29 @@ bool create(const char *file, unsigned initial_size)
 {
 
 	if (file == NULL || !check_address(file))
-	{
 		exit(-1);
-	}
+
 	return filesys_create(file, initial_size);
 }
 
 bool remove(const char *file)
 {
 	if (file == NULL || !check_address(file))
-	{
 		exit(-1);
-	}
+
 	return filesys_remove(file);
 }
 
 int open(const char *file)
 {
-	// printf("파일 포인터 %s\n", file);
 	if (file == NULL || !check_address(file))
-	{
 		exit(-1);
-	}
+
 	struct file *open_file = filesys_open(file);
 
 	if (open_file == NULL)
-	{
 		return -1;
-	}
+
 	return process_add_file(open_file);
 }
 
@@ -179,32 +172,39 @@ int filesize (int fd)
 
 int read (int fd, void *buffer, unsigned size)
 {
-	struct file * f = process_get_file(fd);
-
-	if (f == NULL || fd >= 64)
-		return -1;
+	struct file *f;
 
 	if (fd == 0)
 	{
 		buffer = (void *) input_getc();
+		return size;
 	}
-	else {
+
+	f = process_get_file(fd);
+
+	if (f == NULL || fd >= 64)
+		return -1;
+	else 
 		return file_read(f, buffer, size);
-	}
 }
 
 int write(int fd, void *buffer, unsigned size)
 {
-	struct file *f = process_get_file(fd);
+	struct file *f;
 
 	if (fd == 1){
 		putbuf((char *)buffer, size);
 		return size;
 	}
-	else {
+
+	f = process_get_file(fd);
+
+	if (f == NULL || fd >= 64)
+		return -1;
+	else 
 		return file_write(f, buffer, size);
-	}
-	return -1;
+
+
  }
 
 void seek(int fd, unsigned position)
