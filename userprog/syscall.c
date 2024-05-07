@@ -24,6 +24,8 @@ int open(const char *);
 int filesize (int fd);
 int read (int fd, void *buffer, unsigned size);
 int write(int fd, void *buffer, unsigned size);
+void seek(int fd, unsigned position);
+unsigned tell (int fd);
 void close(int);
 
 /* System call.
@@ -99,7 +101,6 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = open(f->R.rdi);
 		break;
 	case SYS_FILESIZE: /* Obtain a file's size. */
-		/* code */
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
@@ -109,10 +110,10 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK: /* Change position in a file. */
-		/* code */
+		seek(f->R.rdi, f->R.rsi);
 		break;
 	case SYS_TELL: /* Report current position in a file. */
-		/* code */
+		f->R.rax = tell(f->R.rdi);
 		break;
 	case SYS_CLOSE: /* Close a file. */
 		close(f->R.rdi);
@@ -207,6 +208,17 @@ int write(int fd, void *buffer, unsigned size)
 	}
 	return -1;
  }
+
+void seek(int fd, unsigned position)
+{
+	file_seek(process_get_file(fd), position);
+}
+
+unsigned tell (int fd)
+{
+	return file_tell(process_get_file(fd));
+}
+
 
 void close(int fd)
 {
