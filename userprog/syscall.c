@@ -9,6 +9,7 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 
+#include "filesys/file.h"
 #include "filesys/filesys.h"
 
 void syscall_entry(void);
@@ -100,7 +101,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
-		/* code */
+		f->R.rax = read (f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
 		/* code */
@@ -172,11 +173,7 @@ int open(const char *file)
 
 int filesize (int fd)
 {
-	
 	struct file *f = process_get_file(fd);
-	
-	printf("%d", file_length(f));
-	printf("jaeheok 3\n");
 	return file_length(f);
 }
 
