@@ -41,6 +41,8 @@ void close(int);
 #define MSR_LSTAR 0xc0000082		/* Long mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
 
+#define MAX_OPEN_FILE 128
+
 void syscall_init(void)
 {
 	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48 |
@@ -182,7 +184,7 @@ int read (int fd, void *buffer, unsigned size)
 
 	f = process_get_file(fd);
 
-	if (f == NULL || fd >= 64)
+	if (f == NULL || fd >= MAX_OPEN_FILE)
 		return -1;
 	else 
 		return file_read(f, buffer, size);
@@ -199,7 +201,7 @@ int write(int fd, void *buffer, unsigned size)
 
 	f = process_get_file(fd);
 
-	if (f == NULL || fd >= 64)
+	if (f == NULL || fd >= MAX_OPEN_FILE)
 		return -1;
 	else 
 		return file_write(f, buffer, size);

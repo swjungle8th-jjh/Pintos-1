@@ -114,6 +114,13 @@ struct thread
     struct file **fdt;
     int64_t next_fd;
 
+    /* for fork */
+    struct thread *parent;
+    struct list child_list;
+    struct list_elem child_elem;
+
+    struct semaphore wait_sema;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint64_t *pml4; /* Page map level 4 */
@@ -160,6 +167,9 @@ int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
+
+struct thread *get_child_process(tid_t tid);
+void remove_child_process(tid_t tid);
 
 void do_iret(struct intr_frame *tf);
 

@@ -481,6 +481,10 @@ static void init_thread(struct thread *t, const char *name, int priority)
     t->prev_priority = priority;
     /* donation list initialize */
     list_init(&(t->donation_list));
+
+    /* child list initialize */
+    list_init(&(t->child_list));
+
     t->magic = THREAD_MAGIC; // 매직을 넘으면 스택을 넘은 것 . 스택의 마지막을 매직으로 설정해서 스택 오버플로우를 감지한다.
 }
 
@@ -669,4 +673,28 @@ static tid_t allocate_tid(void)
     lock_release(&tid_lock);
 
     return tid;
+}
+
+struct thread *get_child_process(tid_t tid) 
+{
+    struct thread *curr = thread_current();
+    struct list_elem *curr_child_elem = list_begin(&curr->child_list);
+
+    for(; curr_child_elem != NULL; curr_child_elem = list_next(curr_child_elem))
+    {
+        struct thread *curr_child_t = list_entry(curr_child_elem, struct thread, child_elem);
+        if(curr_child_t->tid == tid) 
+            return curr_child_t;
+    }
+    return NULL;
+}
+
+/* 자식이 이 함수를 호출한 것으로 가정하고 이 쓰레드는 바로 죽는다. */
+void remove_child_process(tid_t tid)
+{
+    struct thread *delete_t = get_child_process(tid);
+    if(delete_t != NULL) {
+        list_remove(&delete_t->child_elem);        
+        thread_exit();
+    }
 }

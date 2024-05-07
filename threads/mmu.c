@@ -61,6 +61,12 @@ pdpe_walk (uint64_t *pdpe, const uint64_t va, int create) {
  * on CREATE.  If CREATE is true, then a new page table is
  * created and a pointer into it is returned.  Otherwise, a null
  * pointer is returned. */
+
+/* 페이지 맵 레벨 4, pml4에서 가상 주소 VADDR에 대한 페이지 테이블 엔트리의 주소를 반환합니다.
+
+PML4E에 VADDR에 대한 페이지 테이블이 없는 경우, 동작은 CREATE에 따라 달라집니다.
+CREATE가 true이면 새 페이지 테이블이 생성되고 그 안의 포인터가 반환됩니다.
+그렇지 않으면 널 포인터가 반환됩니다. */
 uint64_t *
 pml4e_walk (uint64_t *pml4e, const uint64_t va, int create) {
 	uint64_t *pte = NULL;
@@ -210,6 +216,11 @@ pml4_activate (uint64_t *pml4) {
  * address UADDR in pml4.  Returns the kernel virtual address
  * corresponding to that physical address, or a null pointer if
  * UADDR is unmapped. */
+
+/* pml4에서 사용자 가상 주소 UADDR에 해당하는 물리 주소를 찾습니다.
+
+해당 물리 주소에 해당하는 커널 가상 주소를 반환하거나,
+UADDR이 매핑되지 않은 경우 널 포인터를 반환합니다. */
 void *
 pml4_get_page (uint64_t *pml4, const void *uaddr) {
 	ASSERT (is_user_vaddr (uaddr));
@@ -229,6 +240,15 @@ pml4_get_page (uint64_t *pml4, const void *uaddr) {
  * otherwise it is read-only.
  * Returns true if successful, false if memory allocation
  * failed. */
+
+/* 사용자 가상 페이지 UPAGE에서 커널 가상 주소 KPAGE로 식별된 물리 프레임에 대한
+
+페이지 맵 레벨 4 PML4에 매핑을 추가합니다.
+UPAGE는 이미 매핑되어 있으면 안 됩니다. KPAGE는 일반적으로 palloc_get_page()로
+사용자 풀에서 얻은 페이지여야 합니다.
+WRITABLE이 true이면 새 페이지는 읽기/쓰기 가능하고,
+그렇지 않으면 읽기 전용입니다.
+성공하면 true를 반환하고, 메모리 할당에 실패하면 false를 반환합니다. */
 bool
 pml4_set_page (uint64_t *pml4, void *upage, void *kpage, bool rw) {
 	ASSERT (pg_ofs (upage) == 0);
