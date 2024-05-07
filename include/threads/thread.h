@@ -7,13 +7,13 @@
 
 #include "threads/interrupt.h"
 
-
 #ifdef VM
 #include "vm/vm.h"
 #endif
 
 /* States in a thread's life cycle. */
-enum thread_status {
+enum thread_status
+{
     THREAD_RUNNING, /* Running thread. */
     THREAD_READY,   /* Not running but ready to run. */
     THREAD_BLOCKED, /* Waiting for an event to trigger. */
@@ -89,7 +89,8 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
-struct thread {
+struct thread
+{
     /* Owned by thread.c. */
     tid_t tid;                 /* Thread identifier. */
     enum thread_status status; /* Thread state. */
@@ -100,7 +101,7 @@ struct thread {
     int prev_priority;
 
     /* 현재 스레드가 얼만큼 실행했는지에 대한 틱 */
-    long long ticks;	
+    long long ticks;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem; /* List element. */
@@ -110,10 +111,13 @@ struct thread {
     struct lock *wait_on_lock;
     struct list_elem donation_elem;
 
-
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint64_t *pml4; /* Page map level 4 */
+
+    /*  File Descriptor*/
+    struct file **fdt;
+    int64_t next_fd;
 #endif
 #ifdef VM
     /* Table for whole virtual memory owned by thread. */
@@ -130,21 +134,21 @@ struct thread {
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
-void thread_init(void);   // struct thread 생성
-void thread_start(void);  // 스케쥴러 시작
+void thread_init(void);  // struct thread 생성
+void thread_start(void); // 스케쥴러 시작
 
-void thread_tick(void);  // 각 타이머 tick에서 발생하는 타이머 인터럽트로부터 호출된다. 이 함수는 스레드 통계를 추적하고, 타임 슬라이스가 만료될 때 스케쥴러를 작동시킨다.
-void thread_print_stats(void);  // Pintos가 종료될 때 스레드 통계를 출력하기 위해 호출된다.
+void thread_tick(void);        // 각 타이머 tick에서 발생하는 타이머 인터럽트로부터 호출된다. 이 함수는 스레드 통계를 추적하고, 타임 슬라이스가 만료될 때 스케쥴러를 작동시킨다.
+void thread_print_stats(void); // Pintos가 종료될 때 스레드 통계를 출력하기 위해 호출된다.
 
-typedef void thread_func(void *aux);  // 쓰레드 루틴
+typedef void thread_func(void *aux); // 쓰레드 루틴
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
-void thread_block(void);               // 쓰레드를 블록상태로 전환
-void thread_unblock(struct thread *);  // 블록 상태의 스레드를 준비 상태로 전환
+void thread_block(void);              // 쓰레드를 블록상태로 전환
+void thread_unblock(struct thread *); // 블록 상태의 스레드를 준비 상태로 전환
 
 struct thread *thread_current(void);
-tid_t thread_tid(void);         // 현재 실행중인 스레드 tid 반환 thread_current() -> tid와 같다.
-const char *thread_name(void);  // 현재 실행중인 스레드의 name을 반환 thread_current ()->name 과 같다.
+tid_t thread_tid(void);        // 현재 실행중인 스레드 tid 반환 thread_current() -> tid와 같다.
+const char *thread_name(void); // 현재 실행중인 스레드의 name을 반환 thread_current ()->name 과 같다.
 
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
