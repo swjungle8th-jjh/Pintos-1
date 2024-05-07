@@ -22,6 +22,8 @@ bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
 int filesize (int fd);
+int read (int fd, void *buffer, unsigned size);
+int write(int fd, void *buffer, unsigned size);
 void close(int);
 
 /* System call.
@@ -104,8 +106,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = read (f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
-		/* code */
-		printf("%s", f->R.rsi); /*테스트 통과를 위한 임시코드?*/
+		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK: /* Change position in a file. */
 		/* code */
@@ -192,6 +193,20 @@ int read (int fd, void *buffer, unsigned size)
 		return file_read(f, buffer, size);
 	}
 }
+
+int write(int fd, void *buffer, unsigned size)
+{
+	struct file *f = process_get_file(fd);
+
+	if (fd == 1){
+		putbuf((char *)buffer, size);
+		return size;
+	}
+	else {
+		return file_write(f, buffer, size);
+	}
+	return -1;
+ }
 
 void close(int fd)
 {
