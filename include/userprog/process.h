@@ -13,4 +13,5 @@ void process_activate(struct thread *next);
 /* file descriptor */
 int process_add_file(struct file *f);
 void process_close_file(int fd);
+struct file *process_get_file(int);
 #endif /* userprog/process.h */
