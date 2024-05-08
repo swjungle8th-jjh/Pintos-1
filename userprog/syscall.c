@@ -18,7 +18,8 @@ void syscall_handler(struct intr_frame *);
 //-- system call
 void halt();
 void exit(int);
-tid_t fork(struct intr_frame *);
+// tid_t fork(struct intr_frame *);
+tid_t fork(const char *thread_name);
 bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
@@ -87,14 +88,15 @@ void syscall_handler(struct intr_frame *f)
 		exit(f->R.rdi);
 		break;
 	case SYS_FORK: /* Clone current process. */
-		f->R.rax = fork(f);
+		memcpy(&thread_current()->fork_tf, f, sizeof(struct intr_frame));
+		f->R.rax = fork(f->R.rdi);
 		break;
 	case SYS_EXEC: /* Switch current process. */
 		f->R.rax = exec(f->R.rdi);
 		break;
 	case SYS_WAIT: /* Wait for a child process to die. */
 		/* code */
-		process_wait(f->R.rdi);
+		f->R.rax = wait(f->R.rdi);
 		break;
 	case SYS_CREATE: /* Create a file. */
 		f->R.rax = create(f->R.rdi, f->R.rsi);
@@ -136,12 +138,21 @@ void halt()
 void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
+	thread_current()->exit_status = status;
 	thread_exit();
 }
 
-tid_t fork(struct intr_frame *if_)
+// tid_t fork(struct intr_frame *if_)
+// {
+// 	return process_fork(if_->R.rdi, if_);
+// }
+
+tid_t fork(const char *thread_name)
 {
-	return process_fork(if_->R.rdi, if_);
+	tid_t ret_val = process_fork(thread_name, &thread_current()->fork_tf);
+	sema_down(&thread_current()->wait_sema);
+
+	return ret_val;
 }
 
 bool create(const char *file, unsigned initial_size)
@@ -235,4 +246,9 @@ tid_t exec(const *cmd_line)
 {
 	process_create_initd(cmd_line);
 	sema_down(&thread_current()->wait_sema);
+}
+
+int wait(tid_t tid)
+{
+	process_wait(tid);
 }

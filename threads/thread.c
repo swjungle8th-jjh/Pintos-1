@@ -225,6 +225,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
     /* for systemcall */
     t->parent = thread_current();
+    list_push_back(&thread_current()->child_list, &t->child_elem);
 
     /* Add to run queue. */
     thread_unblock(t);
@@ -328,6 +329,8 @@ void thread_exit(void)
     /* Just set our status to dying and schedule another process.
          We will be destroyed during the call to schedule_tail(). */
     intr_disable();
+    if(thread_current()->parent)
+        sema_up(&thread_current()->parent->wait_sema);
     do_schedule(THREAD_DYING);
     NOT_REACHED();
 }
@@ -338,6 +341,15 @@ void thread_yield(void)
 {
     struct thread *curr = thread_current();
     enum intr_level old_level;
+
+    if (list_empty(&ready_list))
+        return;
+
+    struct list_elem *front = list_begin(&ready_list);
+    struct thread *front_t = list_entry(front, struct thread, elem);
+
+    if(front_t->priority <= thread_get_priority())
+        return;
 
     ASSERT(!intr_context());
 
@@ -628,7 +640,10 @@ static void do_schedule(int status)
     while (!list_empty(&destruction_req))
     {
         struct thread *victim = list_entry(list_pop_front(&destruction_req), struct thread, elem);
-        palloc_free_page(victim);
+        if(!thread_current()->parent)
+            palloc_free_page(victim);
+        else
+            victim->isdead = true;
     }
     thread_current()->status = status;
     schedule();

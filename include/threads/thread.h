@@ -119,6 +119,8 @@ struct thread
     struct thread *parent;
     struct list child_list;
     struct list_elem child_elem;
+    int exit_status;
+    bool isdead;
 
     struct semaphore wait_sema;
 

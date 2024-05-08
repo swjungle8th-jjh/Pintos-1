@@ -79,14 +79,16 @@ initd(void *f_name)
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
-tid_t process_fork(const char *name, struct intr_frame *if_)
+tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
 	// thread_current()->fork_tf = *if_;
-	memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
+	// memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
 	/* Clone current thread to new thread.*/
 	return thread_create(name,
 						 PRI_DEFAULT, __do_fork, thread_current());
 }
+
+// 부모 죽으면 모든 자식 기다리기 
 
 #ifndef VM
 /* Duplicate the parent's address space by passing this function to the
@@ -192,10 +194,12 @@ __do_fork(void *aux)
 	if (succ)
 	{
 		if_.R.rax = 0;
+		sema_up(&parent->wait_sema);
 		do_iret(&if_);
 	}
 
 error:
+	sema_up(&parent->wait_sema);
 	thread_exit();
 }
 
@@ -229,7 +233,7 @@ int process_exec(void *f_name)
 	/* If load failed, quit. */
 	palloc_free_page(file_name);
 	if (!success)
-		return -1;
+			return -1;
 
 	/* Start switched process. */
 	do_iret(&_if);
@@ -245,14 +249,23 @@ int process_exec(void *f_name)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int process_wait(tid_t child_tid UNUSED)
+int process_wait(tid_t child_tid)
 {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-
-	timer_sleep(300);
-	return 81;
+	struct list child_list = thread_current()->child_list;
+	struct list_elem *tmp = list_begin(&child_list);
+	for(; tmp!=NULL; tmp = list_next(tmp)) {
+		struct thread *t = list_entry(tmp, struct thread, child_elem);
+		if(t->tid == child_tid){
+			sema_down(&thread_current()->wait_sema);
+			
+			palloc_free_page(t);
+			return t->exit_status;
+		}
+	}
+	return -1;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -272,6 +285,13 @@ void process_exit(void)
 	}
 
 	palloc_free_page(curr->fdt);
+
+	struct list child_list = curr->child_list;
+	struct list_elem *tmp = list_begin(&child_list);
+	for (; tmp != NULL; tmp = list_next(tmp)){
+		struct thread *t = list_entry(tmp, struct thread, child_elem);
+		if(!t->isdead) wait(t->tid);
+	}
 
 	process_cleanup();
 }
