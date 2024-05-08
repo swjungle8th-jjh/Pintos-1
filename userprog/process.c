@@ -171,8 +171,14 @@ __do_fork(void *aux)
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
-	file_duplicate(parent->name);
-
+	// 넣어줘야하는건 parent 가 열어고있는 파일목록을 복사하는게 맞는거같음
+	// 리턴값이 파일포인터니까
+	for (int c_fd = 3; c_fd < parent->next_fd; c_fd++)
+	{
+		// NULL의 위치까지 공유해야함 ..
+		// if (parent->fdt[c_fd] != NULL)
+		process_add_file(file_duplicate(parent->fdt[c_fd]));
+	}
 
 	process_init();
 
