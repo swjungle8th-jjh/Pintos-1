@@ -81,7 +81,18 @@ initd(void *f_name)
  * TID_ERROR if the thread cannot be created. */
 tid_t process_fork(const char *name, struct intr_frame *if_)
 {
-	thread_current()->fork_tf = *if_;
+	memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
+	// struct intr_frame *c_if_ = &thread_current()->fork_tf;
+
+	// memcpy(c_if_->R.rbx, if_->R.rbx, sizeof(uint64_t));
+	// memcpy(c_if_->R.rbp, if_->R.rbp, sizeof(uint64_t));
+	// memcpy(c_if_->rsp, if_->rsp, sizeof(uintptr_t));
+
+	// memcpy(c_if_->R.r12, if_->R.r12, sizeof(uint64_t));
+	// memcpy(c_if_->R.r13, if_->R.r13, sizeof(uint64_t));
+	// memcpy(c_if_->R.r14, if_->R.r14, sizeof(uint64_t));
+	// memcpy(c_if_->R.r15, if_->R.r15, sizeof(uint64_t));
+
 	/* Clone current thread to new thread.*/
 	return thread_create(name,
 						 PRI_DEFAULT, __do_fork, thread_current());
@@ -100,17 +111,8 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	// if(!is_kern_pte(pte)) {
-	// 	printf("진짜 여기서 땡\n");
-	// 	return false;
-	// }
-	printf("hi im dup_pte\n");
-	if (!is_user_vaddr (va)){
-		printf("진짜 여기서 떼\n");
+	if (is_kern_pte(pte))
 		return true;
-	} else {
-		printf("진짜 여기서 땡\n");
-	}
 
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page(parent->pml4, va);
@@ -119,23 +121,22 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	 *    TODO: NEWPAGE. */
 	newpage = palloc_get_page(PAL_USER);
 
-
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
 
-	if(is_writable((uint64_t *)parent_page)) 
+	if (is_writable(pte))
 		writable = true;
 	else
 		writable = false;
-	
-	memcpy(newpage, parent_page, PGSIZE);
 
+	memcpy(newpage, parent_page, PGSIZE);
 
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
 	if (!pml4_set_page(current->pml4, va, newpage, writable))
 	{
+		palloc_free_page(newpage);
 		/* 6. TODO: if fail to insert page, do error handling. */
 		return false;
 	}
@@ -151,12 +152,12 @@ static void
 __do_fork(void *aux)
 {
 	struct intr_frame if_;
-	struct thread *parent = (struct thread *)aux;	// create_thread 할 때 들어가는 current니까 부모
-	struct thread *current = thread_current();	// 얘는 문맥전환해서 새로 러닝된 자식이 부르는 current니까 자식
+	struct thread *parent = (struct thread *)aux; // create_thread 할 때 들어가는 current니까 부모
+	struct thread *current = thread_current();	  // 얘는 문맥전환해서 새로 러닝된 자식이 부르는 current니까 자식
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	bool succ = true;
 
-	//parent_if = &parent->tf;
+	// parent_if = &parent->tf;
 
 	/* 1. Read the cpu context to local stack. */
 	memcpy(&if_, &parent->fork_tf, sizeof(struct intr_frame));
@@ -174,7 +175,7 @@ __do_fork(void *aux)
 #else
 	if (!pml4_for_each(parent->pml4, duplicate_pte, parent))
 	{
-		printf("여기서 땡\n");
+
 		goto error;
 	}
 #endif
@@ -196,16 +197,15 @@ __do_fork(void *aux)
 
 	process_init();
 
-
 	/* Finally, switch to the newly created process. */
-	if (succ){
+	if (succ)
+	{
 		if_.R.rax = 0;
-		printf("자식 생성됨\n");
 		do_iret(&if_);
 	}
-		
+
 error:
-	printf("자식 땡\n");
+	printf("에러\n");
 	thread_exit();
 }
 
