@@ -101,7 +101,8 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	if(is_kern_pte(pte)) {
+	if (is_kern_pte(pte))
+	{
 		return true;
 	}
 
@@ -112,18 +113,16 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	 *    TODO: NEWPAGE. */
 	newpage = palloc_get_page(PAL_USER);
 
-
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
 
-	if(is_writable(pte))
+	if (is_writable(pte))
 		writable = true;
 	else
 		writable = false;
-	
-	memcpy(newpage, parent_page, PGSIZE);
 
+	memcpy(newpage, parent_page, PGSIZE);
 
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
@@ -145,12 +144,12 @@ static void
 __do_fork(void *aux)
 {
 	struct intr_frame if_;
-	struct thread *parent = (struct thread *)aux;	// create_thread 할 때 들어가는 current니까 부모
-	struct thread *current = thread_current();	// 얘는 문맥전환해서 새로 러닝된 자식이 부르는 current니까 자식
+	struct thread *parent = (struct thread *)aux; // create_thread 할 때 들어가는 current니까 부모
+	struct thread *current = thread_current();	  // 얘는 문맥전환해서 새로 러닝된 자식이 부르는 current니까 자식
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	bool succ = true;
 
-	//parent_if = &parent->tf;
+	// parent_if = &parent->tf;
 
 	/* 1. Read the cpu context to local stack. */
 	memcpy(&if_, &parent->fork_tf, sizeof(struct intr_frame));
@@ -168,7 +167,6 @@ __do_fork(void *aux)
 #else
 	if (!pml4_for_each(parent->pml4, duplicate_pte, parent))
 	{
-		printf("여기서 땡\n");
 		goto error;
 	}
 #endif
@@ -190,16 +188,14 @@ __do_fork(void *aux)
 
 	process_init();
 
-
 	/* Finally, switch to the newly created process. */
-	if (succ){
+	if (succ)
+	{
 		if_.R.rax = 0;
-		printf("자식 생성됨\n");
 		do_iret(&if_);
 	}
-		
+
 error:
-	printf("자식 땡\n");
 	thread_exit();
 }
 
@@ -224,6 +220,8 @@ int process_exec(void *f_name)
 
 	/* And then load the binary */
 	success = load(file_name, &_if);
+	// 이제는 필요하다 나의 부모 !
+	sema_up(&thread_current()->parent->wait_sema);
 
 	// test hex
 	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, 1);

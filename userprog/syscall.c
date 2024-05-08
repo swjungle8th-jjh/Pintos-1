@@ -22,12 +22,13 @@ tid_t fork(struct intr_frame *);
 bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
-int filesize (int);
-int read (int, void *, unsigned);
+int filesize(int);
+int read(int, void *, unsigned);
 int write(int, void *, unsigned);
-void seek(int, unsigned );
-unsigned tell (int);
+void seek(int, unsigned);
+unsigned tell(int);
 void close(int);
+tid_t exec(const *);
 
 /* System call.
  *
@@ -89,7 +90,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = fork(f);
 		break;
 	case SYS_EXEC: /* Switch current process. */
-		/* code */
+		f->R.rax = exec(f->R.rdi);
 		break;
 	case SYS_WAIT: /* Wait for a child process to die. */
 		/* code */
@@ -108,7 +109,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
-		f->R.rax = read (f->R.rdi, f->R.rsi, f->R.rdx);
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -173,19 +174,19 @@ int open(const char *file)
 	return process_add_file(open_file);
 }
 
-int filesize (int fd)
+int filesize(int fd)
 {
 	struct file *f = process_get_file(fd);
 	return file_length(f);
 }
 
-int read (int fd, void *buffer, unsigned size)
+int read(int fd, void *buffer, unsigned size)
 {
 	struct file *f;
 
 	if (fd == 0)
 	{
-		buffer = (void *) input_getc();
+		buffer = (void *)input_getc();
 		return size;
 	}
 
@@ -193,7 +194,7 @@ int read (int fd, void *buffer, unsigned size)
 
 	if (f == NULL || fd >= MAX_OPEN_FILE)
 		return -1;
-	else 
+	else
 		return file_read(f, buffer, size);
 }
 
@@ -201,7 +202,8 @@ int write(int fd, void *buffer, unsigned size)
 {
 	struct file *f;
 
-	if (fd == 1){
+	if (fd == 1)
+	{
 		putbuf((char *)buffer, size);
 		return size;
 	}
@@ -210,22 +212,19 @@ int write(int fd, void *buffer, unsigned size)
 
 	if (f == NULL || fd >= MAX_OPEN_FILE)
 		return -1;
-	else 
+	else
 		return file_write(f, buffer, size);
-
-
- }
+}
 
 void seek(int fd, unsigned position)
 {
 	file_seek(process_get_file(fd), position);
 }
 
-unsigned tell (int fd)
+unsigned tell(int fd)
 {
 	return file_tell(process_get_file(fd));
 }
-
 
 void close(int fd)
 {
