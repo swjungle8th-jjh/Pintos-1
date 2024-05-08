@@ -496,7 +496,7 @@ static void init_thread(struct thread *t, const char *name, int priority)
     list_init(&(t->child_list));
 
     /* for systemcall */
-    sema_init(&t->wait_sema, 1);
+    sema_init(&t->wait_sema, 0);
 
     t->magic = THREAD_MAGIC; // 매직을 넘으면 스택을 넘은 것 . 스택의 마지막을 매직으로 설정해서 스택 오버플로우를 감지한다.
 }
