@@ -81,7 +81,8 @@ initd(void *f_name)
  * TID_ERROR if the thread cannot be created. */
 tid_t process_fork(const char *name, struct intr_frame *if_)
 {
-	thread_current()->fork_tf = *if_;
+	// thread_current()->fork_tf = *if_;
+	memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
 	/* Clone current thread to new thread.*/
 	return thread_create(name,
 						 PRI_DEFAULT, __do_fork, thread_current());
@@ -100,16 +101,8 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	// if(!is_kern_pte(pte)) {
-	// 	printf("진짜 여기서 땡\n");
-	// 	return false;
-	// }
-	printf("hi im dup_pte\n");
-	if (!is_user_vaddr (va)){
-		printf("진짜 여기서 떼\n");
+	if(is_kern_pte(pte)) {
 		return true;
-	} else {
-		printf("진짜 여기서 땡\n");
 	}
 
 	/* 2. Resolve VA from the parent's page map level 4. */
@@ -124,7 +117,7 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
 
-	if(is_writable((uint64_t *)parent_page)) 
+	if(is_writable(pte))
 		writable = true;
 	else
 		writable = false;
@@ -137,6 +130,7 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	if (!pml4_set_page(current->pml4, va, newpage, writable))
 	{
 		/* 6. TODO: if fail to insert page, do error handling. */
+		palloc_free_page(newpage);
 		return false;
 	}
 	return true;
@@ -259,7 +253,7 @@ int process_wait(tid_t child_tid UNUSED)
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
 
-	timer_sleep(500);
+	timer_sleep(300);
 	return 81;
 }
 

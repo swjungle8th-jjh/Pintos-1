@@ -232,3 +232,8 @@ void close(int fd)
 	process_close_file(fd);
 }
 
+tid_t exec(const *cmd_line)
+{
+	process_create_initd(cmd_line);
+	sema_down(&thread_current()->wait_sema);
+}
