@@ -17,15 +17,16 @@ void syscall_handler(struct intr_frame *);
 
 //-- system call
 void halt();
-void exit(int status);
+void exit(int);
+tid_t fork(struct intr_frame *);
 bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
-int filesize (int fd);
-int read (int fd, void *buffer, unsigned size);
-int write(int fd, void *buffer, unsigned size);
-void seek(int fd, unsigned position);
-unsigned tell (int fd);
+int filesize (int);
+int read (int, void *, unsigned);
+int write(int, void *, unsigned);
+void seek(int, unsigned );
+unsigned tell (int);
 void close(int);
 
 /* System call.
@@ -85,13 +86,14 @@ void syscall_handler(struct intr_frame *f)
 		exit(f->R.rdi);
 		break;
 	case SYS_FORK: /* Clone current process. */
-		/* code */
+		f->R.rax = fork(f);
 		break;
 	case SYS_EXEC: /* Switch current process. */
 		/* code */
 		break;
 	case SYS_WAIT: /* Wait for a child process to die. */
 		/* code */
+		process_wait(f->R.rdi);
 		break;
 	case SYS_CREATE: /* Create a file. */
 		f->R.rax = create(f->R.rdi, f->R.rsi);
@@ -134,6 +136,11 @@ void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
 	thread_exit();
+}
+
+tid_t fork(struct intr_frame *if_)
+{
+	return process_fork(if_->R.rdi, if_);
 }
 
 bool create(const char *file, unsigned initial_size)

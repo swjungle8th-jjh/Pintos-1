@@ -79,8 +79,9 @@ initd(void *f_name)
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
-tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
+tid_t process_fork(const char *name, struct intr_frame *if_)
 {
+	thread_current()->fork_tf = *if_;
 	/* Clone current thread to new thread.*/
 	return thread_create(name,
 						 PRI_DEFAULT, __do_fork, thread_current());
@@ -99,7 +100,18 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	if(is_kern_pte(pte)) return false;
+	// if(!is_kern_pte(pte)) {
+	// 	printf("진짜 여기서 땡\n");
+	// 	return false;
+	// }
+	printf("hi im dup_pte\n");
+	if (!is_user_vaddr (va)){
+		printf("진짜 여기서 떼\n");
+		return true;
+	} else {
+		printf("진짜 여기서 땡\n");
+	}
+
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page(parent->pml4, va);
 
@@ -142,13 +154,12 @@ __do_fork(void *aux)
 	struct thread *parent = (struct thread *)aux;	// create_thread 할 때 들어가는 current니까 부모
 	struct thread *current = thread_current();	// 얘는 문맥전환해서 새로 러닝된 자식이 부르는 current니까 자식
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if;
 	bool succ = true;
 
-	parent_if = &parent->tf;
+	//parent_if = &parent->tf;
 
 	/* 1. Read the cpu context to local stack. */
-	memcpy(&if_, parent_if, sizeof(struct intr_frame));
+	memcpy(&if_, &parent->fork_tf, sizeof(struct intr_frame));
 
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
@@ -162,7 +173,10 @@ __do_fork(void *aux)
 		goto error;
 #else
 	if (!pml4_for_each(parent->pml4, duplicate_pte, parent))
+	{
+		printf("여기서 땡\n");
 		goto error;
+	}
 #endif
 
 	/* TODO: Your code goes here.
@@ -182,10 +196,16 @@ __do_fork(void *aux)
 
 	process_init();
 
+
 	/* Finally, switch to the newly created process. */
-	if (succ)
+	if (succ){
+		if_.R.rax = 0;
+		printf("자식 생성됨\n");
 		do_iret(&if_);
+	}
+		
 error:
+	printf("자식 땡\n");
 	thread_exit();
 }
 
@@ -239,8 +259,8 @@ int process_wait(tid_t child_tid UNUSED)
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
 
-	timer_sleep(100);
-	return -1;
+	timer_sleep(500);
+	return 81;
 }
 
 /* Exit the process. This function is called by thread_exit (). */

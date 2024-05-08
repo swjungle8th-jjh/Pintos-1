@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 
 #ifdef VM
@@ -133,6 +134,7 @@ struct thread
 
     /* Owned by thread.c. */
     struct intr_frame tf; /* Information for switching */
+    struct intr_frame fork_tf;
     unsigned magic;       /* Detects stack overflow. */
 };
 
