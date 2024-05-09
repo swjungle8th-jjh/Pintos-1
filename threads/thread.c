@@ -703,6 +703,7 @@ static tid_t allocate_tid(void)
     return tid;
 }
 
+/* 내 자식이면 해당 자식 thread 반환, 아니면 null 반환 */
 struct thread *get_child_process(tid_t tid)
 {
     struct thread *curr = thread_current();
@@ -717,13 +718,17 @@ struct thread *get_child_process(tid_t tid)
     return NULL;
 }
 
-/* 자식이 이 함수를 호출한 것으로 가정하고 이 쓰레드는 바로 죽는다. */
-void remove_child_process(tid_t tid)
+/* 자식 스레드 찾아서 내 자식이면 자식리스트에서 제거 후 해당 자식 palloc_free */
+int remove_child_process(tid_t tid)
 {
     struct thread *delete_t = get_child_process(tid);
     if (delete_t != NULL)
     {
+        sema_down(&thread_current()->wait_sema);
+        int exit_status = delete_t->exit_status;
         list_remove(&delete_t->child_elem);
-        thread_exit();
+        palloc_free_page(delete_t);
+        return exit_status;
     }
+    return -1;
 }
