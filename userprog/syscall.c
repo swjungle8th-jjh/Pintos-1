@@ -75,7 +75,7 @@ bool check_address(void *addr)
 void syscall_handler(struct intr_frame *f)
 {
 	// TODO: Your implementation goes here.
-	// 스시템콜 핸들러로 등록을 해야함 .
+	// 시스템콜 핸들러로 등록을 해야함 .
 
 	int number = f->R.rax;
 
