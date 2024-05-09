@@ -173,7 +173,7 @@ int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 
 struct thread *get_child_process(tid_t tid);
-void remove_child_process(tid_t tid);
+int remove_child_process(tid_t tid);
 
 void do_iret(struct intr_frame *tf);
 
