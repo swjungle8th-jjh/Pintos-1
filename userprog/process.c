@@ -204,6 +204,9 @@ error:
 int process_exec(void *f_name)
 {
 	char *file_name = f_name;
+	char *fn_copy = palloc_get_page(PAL_ZERO);
+	
+	strlcpy(fn_copy, f_name, PGSIZE);
 	bool success;
 
 	/* We cannot use the intr_frame in the thread structure.
@@ -216,10 +219,13 @@ int process_exec(void *f_name)
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 	/* We first kill the current context */
+	// if(!file_name) printf("file_name is NULL!!!!!!!!!!!!!!!!!\n");
+	// printf("%s asdf\n", fn_copy);
+	// printf("clean 직전\n");
 	process_cleanup();
-
 	/* And then load the binary */
-	success = load(file_name, &_if);
+	// printf("load 직전\n");
+	success = load(fn_copy, &_if);
 	// 이제는 필요하다 나의 부모 !
 	// sema_up(&thread_current()->parent->wait_sema);
 
@@ -227,10 +233,18 @@ int process_exec(void *f_name)
 	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, 1);
 
 	/* If load failed, quit. */
-	palloc_free_page(file_name);
+	// printf("%d\n", thread_current()->tid);
+	if(thread_current()->tid == 1) {	// 잠재적 문제, 현재 tid가 3 이라 실행되지 않음.
+		palloc_free_page(file_name); // exec 시 페이지 파일 네임의 페이지 시작지점이 0이 아님
+	}
+	palloc_free_page(fn_copy);
 	if (!success)
+	{
+		// printf("로드 실패\n");
 		return -1;
+	}
 
+	// printf("로드 성공\n");
 	/* Start switched process. */
 	do_iret(&_if);
 	NOT_REACHED();
@@ -289,6 +303,8 @@ process_cleanup(void)
 	uint64_t *pml4;
 	/* Destroy the current process's page directory and switch back
 	 * to the kernel-only page directory. */
+
+/* 현재 프로세스의 페이지 디렉터리를 파괴하고, 커널 전용 페이지 디렉터리로 전환합니다. */
 	pml4 = curr->pml4;
 	if (pml4 != NULL)
 	{
@@ -299,6 +315,11 @@ process_cleanup(void)
 		 * directory before destroying the process's page
 		 * directory, or our active page directory will be one
 		 * that's been freed (and cleared). */
+		/* 
+여기서 중요한 것은 올바른 순서입니다. 우리는 현재 스레드의 페이지 디렉터리를 프로세스의 페이지 디렉터리로 바꾸기 전에 반드시 cur->pagedir을 NULL로 설정해야 합니다. 
+이렇게 하지 않으면 타이머 인터럽트가 프로세스의 페이지 디렉터리로 다시 바꿀 수 있습니다. 또한, 프로세스의 페이지 디렉터리를 파괴하기 전에 기본 페이지 디렉터리를 활성화해야 합니다. 
+그렇지 않으면 활성화된 페이지 디렉터리가 해제되어 있어서 (그리고 지워져 있어서) 문제가 발생할 수 있습니다. */
+
 		curr->pml4 = NULL;
 		pml4_activate(NULL);
 		pml4_destroy(pml4);
@@ -402,11 +423,14 @@ load(const char *file_name, struct intr_frame *if_)
 	char *temp_parsing[LOADER_ARGS_LEN];
 	int count = 0;
 
+	// printf("파싱 직전\n");
+	// printf("%s\n", file_name);
 	for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
 	{
 		temp_parsing[count++] = token;
+		// printf("%s\n", temp_parsing[count -1]);
 	}
-
+	// printf("파싱 완료\n");
 	/* Open executable file. */
 	file = filesys_open(temp_parsing[0]);
 	if (file == NULL)

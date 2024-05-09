@@ -9,6 +9,9 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 
+#include "include/lib/string.h"
+
+
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
@@ -29,7 +32,7 @@ int write(int, void *, unsigned);
 void seek(int, unsigned);
 unsigned tell(int);
 void close(int);
-tid_t exec(const *);
+int exec(const char*);
 
 /* System call.
  *
@@ -241,8 +244,10 @@ void close(int fd)
 	process_close_file(fd);
 }
 
-tid_t exec(const *cmd_line)
+int exec(const char *file)
 {
 	// process_create_initd(cmd_line);
-	return process_exec(cmd_line);
+	// printf("=====================exec start======================\n");
+	process_exec(file);
+	// printf("exec end========================= :) \n");
 }
