@@ -205,7 +205,7 @@ int process_exec(void *f_name)
 {
 	char *file_name = f_name;
 	char *fn_copy = palloc_get_page(PAL_ZERO);
-	
+
 	strlcpy(fn_copy, f_name, PGSIZE);
 	bool success;
 
@@ -234,7 +234,8 @@ int process_exec(void *f_name)
 
 	/* If load failed, quit. */
 	// printf("%d\n", thread_current()->tid);
-	if(thread_current()->tid == 1) {	// 잠재적 문제, 현재 tid가 3 이라 실행되지 않음.
+	if (thread_current()->tid == 1)
+	{								 // 잠재적 문제, 현재 tid가 3 이라 실행되지 않음.
 		palloc_free_page(file_name); // exec 시 페이지 파일 네임의 페이지 시작지점이 0이 아님
 	}
 	palloc_free_page(fn_copy);
@@ -259,14 +260,15 @@ int process_exec(void *f_name)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int process_wait(tid_t child_tid UNUSED)
+int process_wait(tid_t child_tid)
 {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-
-	timer_sleep(300);
-	return 81;
+	struct thread *child_t = get_child_process(child_tid);
+	if (child_t != NULL)
+	{
+		sema_down(&child_t->wait_sema);
+		return child_t->exit_status;
+	}
+	return -1;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -304,7 +306,7 @@ process_cleanup(void)
 	/* Destroy the current process's page directory and switch back
 	 * to the kernel-only page directory. */
 
-/* 현재 프로세스의 페이지 디렉터리를 파괴하고, 커널 전용 페이지 디렉터리로 전환합니다. */
+	/* 현재 프로세스의 페이지 디렉터리를 파괴하고, 커널 전용 페이지 디렉터리로 전환합니다. */
 	pml4 = curr->pml4;
 	if (pml4 != NULL)
 	{
@@ -315,9 +317,9 @@ process_cleanup(void)
 		 * directory before destroying the process's page
 		 * directory, or our active page directory will be one
 		 * that's been freed (and cleared). */
-		/* 
-여기서 중요한 것은 올바른 순서입니다. 우리는 현재 스레드의 페이지 디렉터리를 프로세스의 페이지 디렉터리로 바꾸기 전에 반드시 cur->pagedir을 NULL로 설정해야 합니다. 
-이렇게 하지 않으면 타이머 인터럽트가 프로세스의 페이지 디렉터리로 다시 바꿀 수 있습니다. 또한, 프로세스의 페이지 디렉터리를 파괴하기 전에 기본 페이지 디렉터리를 활성화해야 합니다. 
+		/*
+여기서 중요한 것은 올바른 순서입니다. 우리는 현재 스레드의 페이지 디렉터리를 프로세스의 페이지 디렉터리로 바꾸기 전에 반드시 cur->pagedir을 NULL로 설정해야 합니다.
+이렇게 하지 않으면 타이머 인터럽트가 프로세스의 페이지 디렉터리로 다시 바꿀 수 있습니다. 또한, 프로세스의 페이지 디렉터리를 파괴하기 전에 기본 페이지 디렉터리를 활성화해야 합니다.
 그렇지 않으면 활성화된 페이지 디렉터리가 해제되어 있어서 (그리고 지워져 있어서) 문제가 발생할 수 있습니다. */
 
 		curr->pml4 = NULL;

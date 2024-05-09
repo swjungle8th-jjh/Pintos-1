@@ -224,7 +224,8 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     t->next_fd = 3;
 
     /* for systemcall */
-    t->parent = thread_current();
+    // t->parent = thread_current();
+    list_push_back(&(thread_current()->child_list), &(t->child_elem));
 
     /* Add to run queue. */
     thread_unblock(t);
@@ -328,6 +329,10 @@ void thread_exit(void)
     /* Just set our status to dying and schedule another process.
          We will be destroyed during the call to schedule_tail(). */
     intr_disable();
+    /* for systemcall */
+
+    sema_up(&thread_current()->wait_sema);
+
     do_schedule(THREAD_DYING);
     NOT_REACHED();
 }

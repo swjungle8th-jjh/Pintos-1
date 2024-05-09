@@ -11,7 +11,6 @@
 
 #include "include/lib/string.h"
 
-
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
@@ -32,7 +31,8 @@ int write(int, void *, unsigned);
 void seek(int, unsigned);
 unsigned tell(int);
 void close(int);
-int exec(const char*);
+int exec(const char *);
+int wait(tid_t);
 
 /* System call.
  *
@@ -98,8 +98,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = exec(f->R.rdi);
 		break;
 	case SYS_WAIT: /* Wait for a child process to die. */
-		/* code */
-		process_wait(f->R.rdi);
+		f->R.rax = wait(f->R.rdi);
 		break;
 	case SYS_CREATE: /* Create a file. */
 		f->R.rax = create(f->R.rdi, f->R.rsi);
@@ -141,6 +140,7 @@ void halt()
 void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
+	thread_current()->exit_status = status;
 	thread_exit();
 }
 
@@ -250,4 +250,9 @@ int exec(const char *file)
 	// printf("=====================exec start======================\n");
 	process_exec(file);
 	// printf("exec end========================= :) \n");
+}
+
+int wait(tid_t tid)
+{
+	return process_wait(tid);
 }
