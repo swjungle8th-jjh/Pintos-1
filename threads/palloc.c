@@ -26,6 +26,16 @@
    half to the user pool.  That should be huge overkill for the
    kernel pool, but that's just fine for demonstration purposes. */
 
+/* 페이지 할당기입니다. 페이지 크기(또는 페이지의 배수)의 메모리 덩어리를 할당합니다.
+더 작은 덩어리를 할당하는 malloc.h를 참조하세요.
+
+시스템 메모리는 커널 풀과 사용자 풀이라는 두 "풀"로 나뉩니다.
+사용자 풀은 사용자(가상) 메모리 페이지용이고, 커널 풀은 그 외의 모든 것을 위한 것입니다.
+여기서 아이디어는 사용자 프로세스가 매우 활발하게 스왑되더라도 커널은 자체 운영을 위한 메모리가 있어야 한다는 것입니다.
+
+기본적으로 시스템 RAM의 절반은 커널 풀에 주어지고, 나머지 절반은 사용자 풀에 주어집니다.
+이것은 커널 풀에 대해 엄청난 과잉 할당이지만, 이는 디모입니다. */
+
 /* A memory pool. */
 struct pool
 {
@@ -327,6 +337,12 @@ palloc_get_multiple(enum palloc_flags flags, size_t page_cnt)
    then the page is filled with zeros.  If no pages are
    available, returns a null pointer, unless PAL_ASSERT is set in
    FLAGS, in which case the kernel panics. */
+
+/* 하나의 빈 페이지를 가져와서 해당하는 커널 가상 주소를 반환합니다.
+PAL_USER가 설정된 경우, 페이지는 사용자 풀에서 가져오고,
+그렇지 않으면 커널 풀에서 가져옵니다. FLAGS에 PAL_ZERO가 설정되어 있으면,
+페이지는 0으로 채워집니다. 페이지를 사용할 수 없는 경우,
+PAL_ASSERT가 FLAGS에 설정되어 있지 않은 한 널 포인터를 반환하며, 이 경우 커널이 패닉 상태에 빠집니다. */
 void *
 palloc_get_page(enum palloc_flags flags)
 {

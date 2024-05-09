@@ -156,8 +156,8 @@ void thread_tick(void)
     /* 양보하고나서의 시간 >= 타임 슬라이스 */
 
     // RR 방식( 우선순위 스케줄링에서는 필요 없음 )
-    // if (++thread_ticks >= TIME_SLICE)
-    //     intr_yield_on_return();
+    if (++thread_ticks >= TIME_SLICE)
+        intr_yield_on_return();
 }
 
 /* Prints thread statistics. */
@@ -181,6 +181,13 @@ void thread_print_stats(void)
      The code provided sets the new thread's `priority' member to
      PRIORITY, but no actual priority scheduling is implemented.
      Priority scheduling is the goal of Problem 1-3. */
+/* 주어진 초기 우선순위(PRIORITY)로 NAME이라는 이름의 새로운 커널 스레드를 생성하며, AUX를 인자로 하여 FUNCTION을 실행시키고, 준비 큐에 추가합니다.
+새로운 스레드의 스레드 식별자를 반환하거나, 생성에 실패할 경우 TID_ERROR를 반환합니다.;
+
+thread_start()가 호출되었다면, 새로운 스레드는 thread_create()가 반환되기 전에 스케줄될 수 있습니다. 심지어 thread_create()가 반환되기 전에 종료될 수도 있습니다.
+반대로, 원래 스레드는 새로운 스레드가 스케줄될 때까지 어떤 시간 동안이라도 실행될 수 있습니다. 순서를 보장해야 할 경우 세마포어나 다른 형태의 동기화를 사용하세요.
+
+제공된 코드는 새로운 스레드의 `priority' 멤버를 PRIORITY로 설정하지만, 실제 우선순위 스케줄링은 구현되어 있지 않습니다. 우선순위 스케줄링은 문제 1-3의 목표입니다. */
 tid_t thread_create(const char *name, int priority, thread_func *function, void *aux)
 {
     struct thread *t;
@@ -215,6 +222,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
         PANIC("Failed to allocate file descriptor table");
     }
     t->next_fd = 3;
+
+    /* for systemcall */
+    t->parent = thread_current();
 
     /* Add to run queue. */
     thread_unblock(t);
@@ -481,6 +491,13 @@ static void init_thread(struct thread *t, const char *name, int priority)
     t->prev_priority = priority;
     /* donation list initialize */
     list_init(&(t->donation_list));
+
+    /* child list initialize */
+    list_init(&(t->child_list));
+
+    /* for systemcall */
+    sema_init(&t->wait_sema, 0);
+
     t->magic = THREAD_MAGIC; // 매직을 넘으면 스택을 넘은 것 . 스택의 마지막을 매직으로 설정해서 스택 오버플로우를 감지한다.
 }
 
@@ -669,4 +686,29 @@ static tid_t allocate_tid(void)
     lock_release(&tid_lock);
 
     return tid;
+}
+
+struct thread *get_child_process(tid_t tid)
+{
+    struct thread *curr = thread_current();
+    struct list_elem *curr_child_elem = list_begin(&curr->child_list);
+
+    for (; curr_child_elem != NULL; curr_child_elem = list_next(curr_child_elem))
+    {
+        struct thread *curr_child_t = list_entry(curr_child_elem, struct thread, child_elem);
+        if (curr_child_t->tid == tid)
+            return curr_child_t;
+    }
+    return NULL;
+}
+
+/* 자식이 이 함수를 호출한 것으로 가정하고 이 쓰레드는 바로 죽는다. */
+void remove_child_process(tid_t tid)
+{
+    struct thread *delete_t = get_child_process(tid);
+    if (delete_t != NULL)
+    {
+        list_remove(&delete_t->child_elem);
+        thread_exit();
+    }
 }

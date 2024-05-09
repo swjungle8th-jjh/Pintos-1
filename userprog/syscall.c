@@ -9,6 +9,9 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 
+#include "include/lib/string.h"
+
+
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
@@ -17,16 +20,19 @@ void syscall_handler(struct intr_frame *);
 
 //-- system call
 void halt();
-void exit(int status);
+void exit(int);
+// tid_t fork(struct intr_frame *);
+tid_t fork(const char *thread_name);
 bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
-int filesize (int fd);
-int read (int fd, void *buffer, unsigned size);
-int write(int fd, void *buffer, unsigned size);
-void seek(int fd, unsigned position);
-unsigned tell (int fd);
+int filesize(int);
+int read(int, void *, unsigned);
+int write(int, void *, unsigned);
+void seek(int, unsigned);
+unsigned tell(int);
 void close(int);
+int exec(const char*);
 
 /* System call.
  *
@@ -40,6 +46,8 @@ void close(int);
 #define MSR_STAR 0xc0000081			/* Segment selector msr */
 #define MSR_LSTAR 0xc0000082		/* Long mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
+
+#define MAX_OPEN_FILE 128
 
 void syscall_init(void)
 {
@@ -83,13 +91,15 @@ void syscall_handler(struct intr_frame *f)
 		exit(f->R.rdi);
 		break;
 	case SYS_FORK: /* Clone current process. */
-		/* code */
+		memcpy(&thread_current()->fork_tf, f, sizeof(struct intr_frame));
+		f->R.rax = fork(f->R.rdi);
 		break;
 	case SYS_EXEC: /* Switch current process. */
-		/* code */
+		f->R.rax = exec(f->R.rdi);
 		break;
 	case SYS_WAIT: /* Wait for a child process to die. */
 		/* code */
+		process_wait(f->R.rdi);
 		break;
 	case SYS_CREATE: /* Create a file. */
 		f->R.rax = create(f->R.rdi, f->R.rsi);
@@ -104,7 +114,7 @@ void syscall_handler(struct intr_frame *f)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
-		f->R.rax = read (f->R.rdi, f->R.rsi, f->R.rdx);
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -132,6 +142,19 @@ void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
 	thread_exit();
+}
+
+// tid_t fork(struct intr_frame *if_)
+// {
+// 	return process_fork(if_->R.rdi, if_);
+// }
+
+tid_t fork(const char *thread_name)
+{
+	tid_t ret_val = process_fork(thread_name, &thread_current()->fork_tf);
+	// sema_down(&thread_current()->wait_sema);
+
+	return ret_val;
 }
 
 bool create(const char *file, unsigned initial_size)
@@ -164,27 +187,27 @@ int open(const char *file)
 	return process_add_file(open_file);
 }
 
-int filesize (int fd)
+int filesize(int fd)
 {
 	struct file *f = process_get_file(fd);
 	return file_length(f);
 }
 
-int read (int fd, void *buffer, unsigned size)
+int read(int fd, void *buffer, unsigned size)
 {
 	struct file *f;
 
 	if (fd == 0)
 	{
-		buffer = (void *) input_getc();
+		buffer = (void *)input_getc();
 		return size;
 	}
 
 	f = process_get_file(fd);
 
-	if (f == NULL || fd >= 64)
+	if (f == NULL || fd >= MAX_OPEN_FILE)
 		return -1;
-	else 
+	else
 		return file_read(f, buffer, size);
 }
 
@@ -192,34 +215,39 @@ int write(int fd, void *buffer, unsigned size)
 {
 	struct file *f;
 
-	if (fd == 1){
+	if (fd == 1)
+	{
 		putbuf((char *)buffer, size);
 		return size;
 	}
 
 	f = process_get_file(fd);
 
-	if (f == NULL || fd >= 64)
+	if (f == NULL || fd >= MAX_OPEN_FILE)
 		return -1;
-	else 
+	else
 		return file_write(f, buffer, size);
-
-
- }
+}
 
 void seek(int fd, unsigned position)
 {
 	file_seek(process_get_file(fd), position);
 }
 
-unsigned tell (int fd)
+unsigned tell(int fd)
 {
 	return file_tell(process_get_file(fd));
 }
-
 
 void close(int fd)
 {
 	process_close_file(fd);
 }
 
+int exec(const char *file)
+{
+	// process_create_initd(cmd_line);
+	// printf("=====================exec start======================\n");
+	process_exec(file);
+	// printf("exec end========================= :) \n");
+}
