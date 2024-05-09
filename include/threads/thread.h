@@ -26,7 +26,7 @@ extern struct list sleep_list;
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
-#define TID_ERROR ((tid_t)-1) /* Error value for tid_t. */
+#define TID_ERROR ((tid_t) - 1) /* Error value for tid_t. */
 
 /* Thread priorities. */
 #define PRI_MIN 0      /* Lowest priority. */
@@ -120,7 +120,13 @@ struct thread
     struct list child_list;
     struct list_elem child_elem;
 
-    struct semaphore wait_sema;
+    /* for systemcall */
+    struct semaphore wait_sema; // 정
+    struct semaphore fork_sema; // 정
+    struct semaphore exit_sema; // 역
+
+    int exit_status;
+    bool is_dead;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -135,7 +141,7 @@ struct thread
     /* Owned by thread.c. */
     struct intr_frame tf; /* Information for switching */
     struct intr_frame fork_tf;
-    unsigned magic;       /* Detects stack overflow. */
+    unsigned magic; /* Detects stack overflow. */
 };
 
 /* If false (default), use round-robin scheduler.
@@ -171,7 +177,7 @@ int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 
 struct thread *get_child_process(tid_t tid);
-void remove_child_process(tid_t tid);
+int remove_child_process(tid_t tid);
 
 void do_iret(struct intr_frame *tf);
 

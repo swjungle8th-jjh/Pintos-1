@@ -155,9 +155,9 @@ void thread_tick(void)
     /* Enforce preemption. */
     /* 양보하고나서의 시간 >= 타임 슬라이스 */
 
-    // RR 방식( 우선순위 스케줄링에서는 필요 없음 )
-    if (++thread_ticks >= TIME_SLICE)
-        intr_yield_on_return();
+    // // RR 방식( 우선순위 스케줄링에서는 필요 없음 )
+    // if (++thread_ticks >= TIME_SLICE)
+    //     intr_yield_on_return();
 }
 
 /* Prints thread statistics. */
@@ -328,6 +328,10 @@ void thread_exit(void)
     /* Just set our status to dying and schedule another process.
          We will be destroyed during the call to schedule_tail(). */
     intr_disable();
+
+    /* for systemcall */
+    sema_up(&thread_current()->parent->wait_sema);
+
     do_schedule(THREAD_DYING);
     NOT_REACHED();
 }
@@ -340,6 +344,12 @@ void thread_yield(void)
     enum intr_level old_level;
 
     ASSERT(!intr_context());
+
+    struct list_elem *front = list_begin(&ready_list);
+    struct thread *front_t = list_entry(front, struct thread, elem);
+
+    if (front_t->priority <= thread_get_priority())
+        return;
 
     old_level = intr_disable();
     if (curr != idle_thread)
@@ -628,7 +638,8 @@ static void do_schedule(int status)
     while (!list_empty(&destruction_req))
     {
         struct thread *victim = list_entry(list_pop_front(&destruction_req), struct thread, elem);
-        palloc_free_page(victim);
+        // palloc_free_page(victim);
+        victim->is_dead = true;
     }
     thread_current()->status = status;
     schedule();
@@ -703,12 +714,19 @@ struct thread *get_child_process(tid_t tid)
 }
 
 /* 자식이 이 함수를 호출한 것으로 가정하고 이 쓰레드는 바로 죽는다. */
-void remove_child_process(tid_t tid)
+
+int remove_child_process(tid_t tid)
 {
     struct thread *delete_t = get_child_process(tid);
     if (delete_t != NULL)
     {
+        if (!(delete_t->is_dead))
+            sema_down(&thread_current()->wait_sema);
+
+        int exit_status = delete_t->exit_status;
         list_remove(&delete_t->child_elem);
-        thread_exit();
+        palloc_free_page(delete_t);
+        return exit_status;
     }
+    return -1;
 }
