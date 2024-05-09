@@ -18,7 +18,8 @@ void syscall_handler(struct intr_frame *);
 //-- system call
 void halt();
 void exit(int);
-tid_t fork(struct intr_frame *);
+// tid_t fork(struct intr_frame *);
+tid_t fork(const char *thread_name);
 bool create(const char *, unsigned);
 bool remove(const char *);
 int open(const char *);
@@ -87,7 +88,8 @@ void syscall_handler(struct intr_frame *f)
 		exit(f->R.rdi);
 		break;
 	case SYS_FORK: /* Clone current process. */
-		f->R.rax = fork(f);
+		memcpy(&thread_current()->fork_tf, f, sizeof(struct intr_frame));
+		f->R.rax = fork(f->R.rdi);
 		break;
 	case SYS_EXEC: /* Switch current process. */
 		f->R.rax = exec(f->R.rdi);
@@ -139,9 +141,17 @@ void exit(int status)
 	thread_exit();
 }
 
-tid_t fork(struct intr_frame *if_)
+// tid_t fork(struct intr_frame *if_)
+// {
+// 	return process_fork(if_->R.rdi, if_);
+// }
+
+tid_t fork(const char *thread_name)
 {
-	return process_fork(if_->R.rdi, if_);
+	tid_t ret_val = process_fork(thread_name, &thread_current()->fork_tf);
+	// sema_down(&thread_current()->wait_sema);
+
+	return ret_val;
 }
 
 bool create(const char *file, unsigned initial_size)
@@ -233,6 +243,6 @@ void close(int fd)
 
 tid_t exec(const *cmd_line)
 {
-	process_create_initd(cmd_line);
-	sema_down(&thread_current()->wait_sema);
+	// process_create_initd(cmd_line);
+	return process_exec(cmd_line);
 }

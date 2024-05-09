@@ -79,10 +79,10 @@ initd(void *f_name)
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
-tid_t process_fork(const char *name, struct intr_frame *if_)
+tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
 	// thread_current()->fork_tf = *if_;
-	memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
+	// memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
 	/* Clone current thread to new thread.*/
 	return thread_create(name,
 						 PRI_DEFAULT, __do_fork, thread_current());
@@ -221,7 +221,7 @@ int process_exec(void *f_name)
 	/* And then load the binary */
 	success = load(file_name, &_if);
 	// 이제는 필요하다 나의 부모 !
-	sema_up(&thread_current()->parent->wait_sema);
+	// sema_up(&thread_current()->parent->wait_sema);
 
 	// test hex
 	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, 1);
