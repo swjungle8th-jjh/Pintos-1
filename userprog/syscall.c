@@ -34,6 +34,7 @@ void close(int);
 int exec(const char *);
 int wait(tid_t);
 
+// struct lock *rw_lock;
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -60,6 +61,7 @@ void syscall_init(void)
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			  FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+
 }
 
 bool check_address(void *addr)
@@ -141,9 +143,6 @@ void exit(int status)
 {
 	printf("%s: exit(%d)\n", thread_current()->name, status);
 	thread_current()->exit_status = status;
-
-	// sema_down(&thread_current()->exit_sema);
-	// list_remove(&thread_current()->child_elem);
 	thread_exit();
 }
 
@@ -155,8 +154,6 @@ void exit(int status)
 tid_t fork(const char *thread_name)
 {
 	tid_t ret_val = process_fork(thread_name, &thread_current()->fork_tf);
-	// sema_down(&thread_current()->wait_sema);
-
 	return ret_val;
 }
 
@@ -198,10 +195,12 @@ int filesize(int fd)
 
 int read(int fd, void *buffer, unsigned size)
 {
+	
 	struct file *f;
 
 	if (fd == 0)
 	{
+		//lock_release(&rw_lock);
 		buffer = (void *)input_getc();
 		return size;
 	}
@@ -209,13 +208,21 @@ int read(int fd, void *buffer, unsigned size)
 	f = process_get_file(fd);
 
 	if (f == NULL || fd >= MAX_OPEN_FILE)
+	{
+	//	lock_release(&rw_lock);
 		return -1;
+	}
 	else
-		return file_read(f, buffer, size);
+	{lock_acquire(&rw_lock);
+		off_t ret = file_read(f, buffer, size);
+		lock_release(&rw_lock);
+		return ret;
+	}
 }
 
 int write(int fd, void *buffer, unsigned size)
 {
+	// lock_acquire(&rw_lock);
 	struct file *f;
 
 	if (fd == 1)
@@ -227,9 +234,17 @@ int write(int fd, void *buffer, unsigned size)
 	f = process_get_file(fd);
 
 	if (f == NULL || fd >= MAX_OPEN_FILE)
+	{
+		//lock_release(&rw_lock);
 		return -1;
+	}
 	else
-		return file_write(f, buffer, size);
+	{
+		lock_acquire(&rw_lock);
+		off_t ret = file_write(f, buffer, size);
+		lock_release(&rw_lock);
+		return ret;
+	}
 }
 
 void seek(int fd, unsigned position)

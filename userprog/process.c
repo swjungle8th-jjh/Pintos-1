@@ -84,11 +84,21 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 	// thread_current()->fork_tf = *if_;
 	// memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
 	/* Clone current thread to new thread.*/
-	tid_t child = thread_create(name,
+	tid_t tid = thread_create(name,
 								PRI_DEFAULT, __do_fork, thread_current());
-	sema_down(&get_child_process(child)->fork_sema);
+	if(tid == TID_ERROR)
+	{
+		return TID_ERROR;
+	}
+	struct thread *child = get_child_process(tid);
+	
+	sema_down(&child->fork_sema);
+	if(child->exit_status == TID_ERROR)
+	{
+		return TID_ERROR;
+	}
 
-	return child;
+	return tid;
 }
 
 #ifndef VM
@@ -104,7 +114,7 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	if (is_kern_pte(pte))
+	if (is_kernel_vaddr(va))
 	{
 		return true;
 	}
@@ -119,11 +129,7 @@ duplicate_pte(uint64_t *pte, void *va, void *aux)
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
-
-	if (is_writable(pte))
-		writable = true;
-	else
-		writable = false;
+	writable = is_writable(pte);
 
 	memcpy(newpage, parent_page, PGSIZE);
 
@@ -149,16 +155,18 @@ __do_fork(void *aux)
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *)aux; // create_thread 할 때 들어가는 current니까 부모
 	struct thread *current = thread_current();	  // 얘는 문맥전환해서 새로 러닝된 자식이 부르는 current니까 자식
+	struct intr_frame *parent_if = &parent->fork_tf;
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	bool succ = true;
 
 	/* -------------- */
-	intr_disable();
+	//intr_disable();
 
 	// parent_if = &parent->tf;
 
 	/* 1. Read the cpu context to local stack. */
-	memcpy(&if_, &parent->fork_tf, sizeof(struct intr_frame));
+	memcpy(&if_, parent_if, sizeof(struct intr_frame));
+	if_.R.rax = 0;
 
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
@@ -192,21 +200,22 @@ __do_fork(void *aux)
 		process_add_file(file_duplicate(parent->fdt[c_fd]));
 	}
 
-	process_init();
+	//process_init();
 
 	/* Finally, switch to the newly created process. */
 	if (succ)
 	{
 		sema_up(&current->fork_sema);
-		intr_enable();
-		if_.R.rax = 0;
+		//intr_enable();
 		do_iret(&if_);
 	}
 
 error:
+	current->exit_status = TID_ERROR;
 	sema_up(&current->fork_sema);
-	intr_enable();
-	thread_exit();
+	//intr_enable();
+	//thread_exit();
+	exit(TID_ERROR);
 }
 
 /* Switch the current execution context to the f_name.
@@ -237,8 +246,7 @@ int process_exec(void *f_name)
 	// printf("load 직전\n");
 	success = load(fn_copy, &_if);
 	
-	if(thread_current()->run_file)
-		file_deny_write(thread_current()->run_file);
+
 	// 이제는 필요하다 나의 부모 !
 	// sema_up(&thread_current()->parent->wait_sema);
 
@@ -305,7 +313,7 @@ void process_exit(void)
 		if (curr->fdt[c_fd] != NULL)
 			process_close_file(c_fd);
 	}
-	if(!curr->run_file)
+	if(curr->run_file)
 		file_close(curr->run_file);
 
 	palloc_free_page(curr->fdt);
@@ -461,7 +469,7 @@ load(const char *file_name, struct intr_frame *if_)
 		printf("load: %s: open failed\n", file_name);
 		goto done;
 	}
-	thread_current()->run_file = file;
+	
 
 	/* Read and verify executable header. */
 	if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64
@@ -528,7 +536,8 @@ load(const char *file_name, struct intr_frame *if_)
 			break;
 		}
 	}
-
+	thread_current()->run_file = file;
+	file_deny_write(file);
 	/* Set up stack. */
 	if (!setup_stack(if_))
 		goto done;

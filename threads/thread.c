@@ -39,6 +39,8 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+struct lock rw_lock;
+
 /* Thread destruction requests */
 static struct list destruction_req;
 
@@ -95,6 +97,7 @@ static uint64_t gdt[3] = {0, 0x00af9a000000ffff, 0x00cf92000000ffff};
 
      It is not safe to call thread_current() until this function
      finishes. */
+     
 void thread_init(void)
 {
     ASSERT(intr_get_level() == INTR_OFF);
@@ -112,6 +115,8 @@ void thread_init(void)
 
     /* sleep list initialize */
     list_init(&sleep_list);
+
+    lock_init(&rw_lock);
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread();
