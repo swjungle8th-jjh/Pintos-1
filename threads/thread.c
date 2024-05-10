@@ -332,6 +332,7 @@ void thread_exit(void)
     /* for systemcall */
 
     sema_up(&thread_current()->wait_sema);
+    list_remove(&thread_current()->child_elem);
 
     do_schedule(THREAD_DYING);
     NOT_REACHED();
@@ -345,7 +346,6 @@ void thread_yield(void)
     enum intr_level old_level;
 
     ASSERT(!intr_context());
-
     old_level = intr_disable();
     if (curr != idle_thread)
     {
@@ -502,6 +502,8 @@ static void init_thread(struct thread *t, const char *name, int priority)
 
     /* for systemcall */
     sema_init(&t->wait_sema, 0);
+    sema_init(&t->exit_sema, 0);
+    sema_init(&t->fork_sema, 0);
 
     t->magic = THREAD_MAGIC; // 매직을 넘으면 스택을 넘은 것 . 스택의 마지막을 매직으로 설정해서 스택 오버플로우를 감지한다.
 }
@@ -633,6 +635,7 @@ static void do_schedule(int status)
     while (!list_empty(&destruction_req))
     {
         struct thread *victim = list_entry(list_pop_front(&destruction_req), struct thread, elem);
+
         palloc_free_page(victim);
     }
     thread_current()->status = status;
@@ -698,7 +701,7 @@ struct thread *get_child_process(tid_t tid)
     struct thread *curr = thread_current();
     struct list_elem *curr_child_elem = list_begin(&curr->child_list);
 
-    for (; curr_child_elem != NULL; curr_child_elem = list_next(curr_child_elem))
+    for (; curr_child_elem->next != NULL; curr_child_elem = list_next(curr_child_elem))
     {
         struct thread *curr_child_t = list_entry(curr_child_elem, struct thread, child_elem);
         if (curr_child_t->tid == tid)

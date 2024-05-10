@@ -121,7 +121,11 @@ struct thread
     struct list_elem child_elem;
 
     struct semaphore wait_sema;
+    struct semaphore exit_sema; // 일단 넣기.. ?
+    struct semaphore fork_sema;
+
     int exit_status;
+    bool lock_flag;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

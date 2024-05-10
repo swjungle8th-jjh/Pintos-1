@@ -84,8 +84,11 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 	// thread_current()->fork_tf = *if_;
 	// memcpy(&thread_current()->fork_tf, if_, sizeof(struct intr_frame));
 	/* Clone current thread to new thread.*/
-	return thread_create(name,
-						 PRI_DEFAULT, __do_fork, thread_current());
+	tid_t child = thread_create(name,
+								PRI_DEFAULT, __do_fork, thread_current());
+	sema_down(&get_child_process(child)->fork_sema);
+
+	return child;
 }
 
 #ifndef VM
@@ -149,6 +152,9 @@ __do_fork(void *aux)
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	bool succ = true;
 
+	/* -------------- */
+	intr_disable();
+
 	// parent_if = &parent->tf;
 
 	/* 1. Read the cpu context to local stack. */
@@ -191,11 +197,15 @@ __do_fork(void *aux)
 	/* Finally, switch to the newly created process. */
 	if (succ)
 	{
+		sema_up(&current->fork_sema);
+		intr_enable();
 		if_.R.rax = 0;
 		do_iret(&if_);
 	}
 
 error:
+	sema_up(&current->fork_sema);
+	intr_enable();
 	thread_exit();
 }
 
@@ -265,7 +275,12 @@ int process_wait(tid_t child_tid)
 	struct thread *child_t = get_child_process(child_tid);
 	if (child_t != NULL)
 	{
+
+		// printf("in thread_c = %d , child_tid => %d == %d\n", thread_current()->tid, child_t->tid, child_tid);
+
+		sema_up(&child_t->exit_sema);
 		sema_down(&child_t->wait_sema);
+
 		return child_t->exit_status;
 	}
 	return -1;
