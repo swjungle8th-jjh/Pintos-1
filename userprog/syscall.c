@@ -142,8 +142,8 @@ void exit(int status)
 	printf("%s: exit(%d)\n", thread_current()->name, status);
 	thread_current()->exit_status = status;
 
-	sema_down(&thread_current()->exit_sema);
-	list_remove(&thread_current()->child_elem);
+	// sema_down(&thread_current()->exit_sema);
+	// list_remove(&thread_current()->child_elem);
 	thread_exit();
 }
 

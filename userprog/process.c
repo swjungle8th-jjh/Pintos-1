@@ -236,6 +236,9 @@ int process_exec(void *f_name)
 	/* And then load the binary */
 	// printf("load 직전\n");
 	success = load(fn_copy, &_if);
+	
+	if(thread_current()->run_file)
+		file_deny_write(thread_current()->run_file);
 	// 이제는 필요하다 나의 부모 !
 	// sema_up(&thread_current()->parent->wait_sema);
 
@@ -278,8 +281,9 @@ int process_wait(tid_t child_tid)
 
 		// printf("in thread_c = %d , child_tid => %d == %d\n", thread_current()->tid, child_t->tid, child_tid);
 
-		sema_up(&child_t->exit_sema);
 		sema_down(&child_t->wait_sema);
+		list_remove(&child_t->child_elem);
+		sema_up(&child_t->exit_sema);
 
 		return child_t->exit_status;
 	}
@@ -301,6 +305,8 @@ void process_exit(void)
 		if (curr->fdt[c_fd] != NULL)
 			process_close_file(c_fd);
 	}
+	if(!curr->run_file)
+		file_close(curr->run_file);
 
 	palloc_free_page(curr->fdt);
 
@@ -455,6 +461,7 @@ load(const char *file_name, struct intr_frame *if_)
 		printf("load: %s: open failed\n", file_name);
 		goto done;
 	}
+	thread_current()->run_file = file;
 
 	/* Read and verify executable header. */
 	if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64
@@ -574,7 +581,7 @@ load(const char *file_name, struct intr_frame *if_)
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close(file);
+	// file_close(file);
 	return success;
 }
 

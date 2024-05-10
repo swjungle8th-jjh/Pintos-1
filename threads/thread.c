@@ -332,7 +332,8 @@ void thread_exit(void)
     /* for systemcall */
 
     sema_up(&thread_current()->wait_sema);
-    list_remove(&thread_current()->child_elem);
+    sema_down(&thread_current()->exit_sema);
+    // list_remove(&thread_current()->child_elem);
 
     do_schedule(THREAD_DYING);
     NOT_REACHED();

@@ -124,6 +124,8 @@ struct thread
     struct semaphore exit_sema; // 일단 넣기.. ?
     struct semaphore fork_sema;
 
+    struct file *run_file;
+
     int exit_status;
     bool lock_flag;
 
