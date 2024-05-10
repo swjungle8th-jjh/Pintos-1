@@ -26,7 +26,7 @@ extern struct list sleep_list;
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
-#define TID_ERROR ((tid_t)-1) /* Error value for tid_t. */
+#define TID_ERROR ((tid_t) - 1) /* Error value for tid_t. */
 
 /* Thread priorities. */
 #define PRI_MIN 0      /* Lowest priority. */
@@ -116,11 +116,16 @@ struct thread
     int64_t next_fd;
 
     /* for fork */
-    struct thread *parent;
+    // struct thread *parent;
     struct list child_list;
     struct list_elem child_elem;
 
     struct semaphore wait_sema;
+    struct semaphore exit_sema; // 일단 넣기.. ?
+    struct semaphore fork_sema;
+
+    int exit_status;
+    bool lock_flag;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -135,7 +140,7 @@ struct thread
     /* Owned by thread.c. */
     struct intr_frame tf; /* Information for switching */
     struct intr_frame fork_tf;
-    unsigned magic;       /* Detects stack overflow. */
+    unsigned magic; /* Detects stack overflow. */
 };
 
 /* If false (default), use round-robin scheduler.
