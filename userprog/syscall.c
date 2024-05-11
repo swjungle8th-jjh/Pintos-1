@@ -13,6 +13,8 @@
 
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "include/threads/palloc.h"
+#include "devices/input.h"
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -61,7 +63,6 @@ void syscall_init(void)
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			  FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
-
 }
 
 bool check_address(void *addr)
@@ -153,8 +154,7 @@ void exit(int status)
 
 tid_t fork(const char *thread_name)
 {
-	tid_t ret_val = process_fork(thread_name, &thread_current()->fork_tf);
-	return ret_val;
+	return process_fork(thread_name, &thread_current()->fork_tf);
 }
 
 bool create(const char *file, unsigned initial_size)
@@ -179,7 +179,9 @@ int open(const char *file)
 	if (file == NULL || !check_address(file))
 		exit(-1);
 
+	// lock_acquire(&rw_lock);
 	struct file *open_file = filesys_open(file);
+	// lock_release(&rw_lock);
 
 	if (open_file == NULL)
 		return -1;
@@ -195,25 +197,30 @@ int filesize(int fd)
 
 int read(int fd, void *buffer, unsigned size)
 {
-	
+
 	struct file *f;
 
 	if (fd == 0)
 	{
-		//lock_release(&rw_lock);
-		buffer = (void *)input_getc();
-		return size;
+		// lock_release(&rw_lock);
+		unsigned i;
+		for (i = 0; i < size; i++)
+		{
+			((char *)buffer)[i] = input_getc();
+		}
+		return i;
 	}
 
 	f = process_get_file(fd);
 
 	if (f == NULL || fd >= MAX_OPEN_FILE)
 	{
-	//	lock_release(&rw_lock);
+		//	lock_release(&rw_lock);
 		return -1;
 	}
 	else
-	{lock_acquire(&rw_lock);
+	{
+		lock_acquire(&rw_lock);
 		off_t ret = file_read(f, buffer, size);
 		lock_release(&rw_lock);
 		return ret;
@@ -235,7 +242,7 @@ int write(int fd, void *buffer, unsigned size)
 
 	if (f == NULL || fd >= MAX_OPEN_FILE)
 	{
-		//lock_release(&rw_lock);
+		// lock_release(&rw_lock);
 		return -1;
 	}
 	else
@@ -262,15 +269,27 @@ void close(int fd)
 	process_close_file(fd);
 }
 
-int exec(const char *file)
+int exec(const char *file_name)
 {
-	// process_create_initd(cmd_line);
-	// printf("=====================exec start======================\n");
-	process_exec(file);
-	// printf("exec end========================= :) \n");
+	check_address(file_name);
+
+	int file_size = strlen(file_name) + 1;
+	char *fn_copy = palloc_get_page(PAL_ZERO);
+	if (!fn_copy)
+	{
+		exit(-1);
+		return -1;
+	}
+	strlcpy(fn_copy, file_name, file_size);
+	if (process_exec(fn_copy) == -1)
+	{
+		exit(-1);
+		return -1;
+	}
 }
 
 int wait(tid_t tid)
 {
+
 	return process_wait(tid);
 }

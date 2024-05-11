@@ -97,7 +97,7 @@ static uint64_t gdt[3] = {0, 0x00af9a000000ffff, 0x00cf92000000ffff};
 
      It is not safe to call thread_current() until this function
      finishes. */
-     
+
 void thread_init(void)
 {
     ASSERT(intr_get_level() == INTR_OFF);
