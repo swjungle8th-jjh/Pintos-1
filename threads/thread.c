@@ -67,8 +67,6 @@ static void do_schedule(int status);
 static void schedule(void);
 static tid_t allocate_tid(void);
 
-void run_highest_priority_thread(int curr_priority);
-
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -234,6 +232,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
     /* Add to run queue. */
     thread_unblock(t);
+    run_highest_priority_thread(thread_get_priority());
 
     return tid;
 }
@@ -279,14 +278,7 @@ void thread_unblock(struct thread *t)
     ASSERT(t->status == THREAD_BLOCKED);
     list_insert_ordered(&ready_list, &t->elem, decrease_func, NULL);
     t->status = THREAD_READY;
-    int p = thread_get_priority();
 
-    // idle 이 current thread일 때 하면 터짐.. 이유가 뭘까 ?
-    // 이닛단계에서 idle이 세마업을 해주기도 전에 main으로 컨텍스트 스위칭이되어서
-    // 세마에 갇힌 메인을 꺼내주지 못함.
-
-    if (strcmp(thread_name(), "idle"))
-        run_highest_priority_thread(p);
     // list_push_back(&ready_list, &t->elem);
     intr_set_level(old_level);
 }
@@ -377,7 +369,7 @@ void donate_priority_2(struct lock *lock)
             lock = lock->holder->wait_on_lock;
         }
     }
-    // intr_set_level(old_level);
+    intr_set_level(old_level);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -399,7 +391,7 @@ void run_highest_priority_thread(int curr_priority)
     struct list_elem *front = list_begin(&ready_list);
     struct thread *front_t = list_entry(front, struct thread, elem);
 
-    if (!intr_context() && front_t->priority >= curr_priority)
+    if (!intr_context() && front_t->priority > curr_priority)
     {
         thread_yield();
     }

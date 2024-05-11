@@ -20,6 +20,7 @@ enum thread_status
     THREAD_BLOCKED, /* Waiting for an event to trigger. */
     THREAD_DYING    /* About to be destroyed. */
 };
+void run_highest_priority_thread(int curr_priority);
 
 extern struct list sleep_list;
 

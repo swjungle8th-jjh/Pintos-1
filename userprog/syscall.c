@@ -185,8 +185,13 @@ int open(const char *file)
 
 	if (open_file == NULL)
 		return -1;
+	struct thread *t = thread_current();
+	struct file **table = t->fdt;
+	int fd = t->next_fd;
 
-	return process_add_file(open_file);
+	table[fd] = open_file;
+	t->next_fd = fd + 1;
+	return fd;
 }
 
 int filesize(int fd)
