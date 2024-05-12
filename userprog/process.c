@@ -234,8 +234,8 @@ error:
 	current->exit_status = TID_ERROR;
 	sema_up(&current->fork_sema);
 	// intr_enable();
-	thread_exit();
 	exit(TID_ERROR);
+	// thread_exit();
 }
 
 /* Switch the current execution context to the f_name.
@@ -262,7 +262,6 @@ int process_exec(void *f_name)
 	/* If load failed, quit. */
 	if (!success)
 	{
-		palloc_free_page(file_name);
 		return -1;
 	}
 
@@ -314,6 +313,7 @@ void process_exit(void)
 		struct thread *t = list_entry(child, struct thread, child_elem);
 		sema_up(&t->exit_sema);
 	}
+
 
 	for (int c_fd = 0; c_fd < curr->next_fd; c_fd++)
 	{

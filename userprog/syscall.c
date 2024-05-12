@@ -188,8 +188,11 @@ int open(const char *file)
 	struct thread *t = thread_current();
 	struct file **table = t->fdt;
 	int fd = t->next_fd;
-	if (fd > 65)
+	if (fd >= MAX_OPEN_FILE)
+	{
+		free(open_file);
 		return -1;
+	}
 
 	table[fd] = open_file;
 	t->next_fd = fd + 1;
@@ -287,7 +290,6 @@ int exec(const char *file_name)
 		exit(-1);
 	}
 	strlcpy(fn_copy, file_name, file_size);
-	palloc_free_page(file_name);
 	if (process_exec(fn_copy) == -1)
 	{
 		exit(-1);
