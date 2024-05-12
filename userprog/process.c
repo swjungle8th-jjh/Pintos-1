@@ -202,7 +202,14 @@ __do_fork(void *aux)
 	{
 		if (table[cnt])
 		{
-			current->fdt[cnt] = file_duplicate(table[cnt]);
+			struct file *d_file = file_duplicate(table[cnt]);
+			if (!d_file)
+			{
+				current->fdt[cnt] = NULL;
+				current->next_fd++;
+				continue;
+			}
+			current->fdt[cnt] = d_file;
 			current->next_fd++;
 		}
 		else
@@ -227,7 +234,7 @@ error:
 	current->exit_status = TID_ERROR;
 	sema_up(&current->fork_sema);
 	// intr_enable();
-	// thread_exit();
+	thread_exit();
 	exit(TID_ERROR);
 }
 
@@ -588,6 +595,7 @@ load(const char *file_name, struct intr_frame *if_)
 done:
 	/* We arrive here whether the load is successful or not. */
 	// file_close(file);
+	palloc_free_page(file_name);
 	return success;
 }
 

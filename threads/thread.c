@@ -222,7 +222,8 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     t->fdt = palloc_get_page(PAL_ZERO);
     if (t->fdt == NULL)
     {
-        PANIC("Failed to allocate file descriptor table");
+        // PANIC("Failed to allocate file descriptor table");
+        return TID_ERROR;
     }
     t->next_fd = 3;
 
