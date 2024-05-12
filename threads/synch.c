@@ -113,7 +113,6 @@ void sema_up(struct semaphore *sema)
     ASSERT(sema != NULL);
 
     old_level = intr_disable();
-    sema->value++; // 원자성 보장하기 위해
     if (!list_empty(&sema->waiters))
     {
         /* donate 상황에서 세마 리스트 뒤에 우선순위가 변경된 경우 정렬이 안되어 있을 수 있으므로 */
@@ -121,7 +120,10 @@ void sema_up(struct semaphore *sema)
 
         thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
     }
+    sema->value++; // 원자성 보장하기 위해
+    int p = thread_get_priority();
 
+    run_highest_priority_thread(p);
     intr_set_level(old_level);
 }
 
@@ -208,7 +210,7 @@ void donate_priority(struct lock *lock)
             lock = lock->holder->wait_on_lock;
         }
     }
-    // intr_set_level(old_level);
+    intr_set_level(old_level);
 }
 
 /* 도네이션 리스트를 순회한다 > 해당 스레드 elem 을 entry 로 꺼내서 thread-> wait_on_lock ==  lock >> 얘를 빼준다. */
@@ -226,7 +228,7 @@ void remove_with_lock(struct lock *lock)
             list_remove(tmp);
         }
     }
-    // intr_set_level(old_level);
+    // (old_level);
 }
 
 void refresh_priority(void)

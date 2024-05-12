@@ -20,6 +20,7 @@ enum thread_status
     THREAD_BLOCKED, /* Waiting for an event to trigger. */
     THREAD_DYING    /* About to be destroyed. */
 };
+void run_highest_priority_thread(int curr_priority);
 
 extern struct list sleep_list;
 
@@ -123,6 +124,8 @@ struct thread
     struct semaphore wait_sema;
     struct semaphore exit_sema; // 일단 넣기.. ?
     struct semaphore fork_sema;
+
+    struct file *run_file;
 
     int exit_status;
     bool lock_flag;
